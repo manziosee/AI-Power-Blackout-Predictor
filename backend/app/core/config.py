@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     SMS_GATEWAY_URL: str = "http://localhost:8001"
     SMS_GATEWAY_API_KEY: str = ""
 
+    # Web Push VAPID keys — generate with: python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); print(v.private_pem().decode()); print(v.public_key)"
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_CLAIMS_EMAIL: str = "mailto:admin@blackoutpredictor.com"
+
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     class Config:

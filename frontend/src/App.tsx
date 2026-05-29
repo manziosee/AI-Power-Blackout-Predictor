@@ -5,19 +5,27 @@ import MapPage from "./pages/Map";
 import AlertSettingsPage from "./pages/AlertSettings";
 import ReportOutagePage from "./pages/ReportOutage";
 import ProfilePage from "./pages/Profile";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import OfflineBadge from "./components/common/OfflineBadge";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 
 export default function App() {
   return (
     <div className="min-h-screen">
       <OfflineBadge />
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/map" element={<MapPage />} />
-        <Route path="/alerts" element={<AlertSettingsPage />} />
-        <Route path="/report" element={<ReportOutagePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        {/* Public */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Protected */}
+        <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+        <Route path="/alerts" element={<ProtectedRoute><AlertSettingsPage /></ProtectedRoute>} />
+        <Route path="/report" element={<ProtectedRoute><ReportOutagePage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       </Routes>
     </div>
   );
