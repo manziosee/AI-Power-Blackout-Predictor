@@ -1,0 +1,8 @@
+{
+  "prediction": { "window": "Prediction Window" },
+  "home": { "title": "Blackout Predictor", "subtitle": "AI-powered outage alerts" },
+  "report": { "title": "Report Outage", "submit": "Report Outage Now", "submitting": "Submitting...", "thanks": "Thank you!" },
+  "map": { "title": "Global Heatmap" },
+  "alerts": { "title": "Alert Settings", "add": "Add Alert" },
+  "risk": { "low": "LOW", "medium": "MEDIUM", "high": "HIGH", "critical": "CRITICAL" }
+}

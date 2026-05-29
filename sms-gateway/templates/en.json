@@ -1,0 +1,7 @@
+{
+  "outage_warning": "POWER ALERT: {prob} chance of outage in your area at {time}. Charge devices now.",
+  "outage_confirmed": "OUTAGE CONFIRMED in your area. Reported by multiple users. Expected duration unknown.",
+  "outage_resolved": "POWER RESTORED in your area. Outage lasted approximately {duration} minutes.",
+  "welcome": "Welcome to Blackout Predictor! You will receive alerts when outages are predicted in your area.",
+  "test": "This is a test message from Blackout Predictor. Your SMS alerts are working correctly."
+}

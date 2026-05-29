@@ -1,0 +1,7 @@
+{
+  "outage_warning": "IMBARAGA: Amashanyarazi azima mu gace kawe saa {time} ({prob}). Shaza ibikoresho byawe nonaha.",
+  "outage_confirmed": "GUCIKAMO AMASHANYARAZI byemejwe mu gace kawe. Byatangajwe n'abatumiwa benshi.",
+  "outage_resolved": "AMASHANYARAZI AGARUTSE mu gace kawe. Gucikamo byamaze iminota {duration}.",
+  "welcome": "Murakaza neza kuri Blackout Predictor! Uzahabwa imenyesha igihe gucikamo amashanyarazi guteganijwe mu gace kawe.",
+  "test": "Ubu ni ubutumwa bw'igerageza buvuye kuri Blackout Predictor. Imenyesha yawe ya SMS ikora neza."
+}

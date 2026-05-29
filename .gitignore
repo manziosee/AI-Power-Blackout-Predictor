@@ -1,0 +1,53 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+*.egg
+
+# ML model artifacts
+ml-engine/model_store/**/*.pkl
+ml-engine/model_store/**/*.joblib
+ml-engine/model_store/**/*.json
+!ml-engine/model_store/**/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Alembic
+backend/migrations/versions/*.pyc
+
+# Jasmin
+sms-gateway/jasmin/*.db

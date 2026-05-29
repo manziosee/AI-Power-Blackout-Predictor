@@ -1,0 +1,7 @@
+{
+  "outage_warning": "ALERTA DE ENERGIA: {prob} de chance de apagão na sua área às {time}. Carregue seus dispositivos agora.",
+  "outage_confirmed": "APAGÃO CONFIRMADO na sua área. Relatado por vários usuários. Duração desconhecida.",
+  "outage_resolved": "ENERGIA RESTAURADA na sua área. O apagão durou aproximadamente {duration} minutos.",
+  "welcome": "Bem-vindo ao Blackout Predictor! Você receberá alertas quando apagões forem previstos na sua área.",
+  "test": "Esta é uma mensagem de teste do Blackout Predictor. Seus alertas SMS estão funcionando corretamente."
+}
