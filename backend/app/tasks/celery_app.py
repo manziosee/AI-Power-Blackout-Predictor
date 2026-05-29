@@ -11,6 +11,7 @@ celery_app = Celery(
         "app.tasks.predict",
         "app.tasks.alert",
         "app.tasks.weather_fetch",
+        "app.tasks.instant_alert",
     ],
 )
 

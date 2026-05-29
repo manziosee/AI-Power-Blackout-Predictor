@@ -3,12 +3,34 @@ import { Link } from "react-router-dom";
 import { createSubscription, deleteSubscription, getSubscriptions } from "../services/api";
 import { useAlertsStore } from "../store/alerts";
 import { useGeolocation } from "../hooks/useGeolocation";
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "../services/push";
 
 export default function AlertSettingsPage() {
   const { subscriptions, setSubscriptions, addSubscription, removeSubscription } = useAlertsStore();
   const { h3Index } = useGeolocation();
   const [threshold, setThreshold] = useState(0.7);
   const [channels, setChannels] = useState<string[]>(["sms", "push"]);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    isPushSubscribed().then(setPushEnabled);
+  }, []);
+
+  async function handlePushToggle() {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+      } else {
+        const ok = await subscribeToPush();
+        setPushEnabled(ok);
+      }
+    } finally {
+      setPushLoading(false);
+    }
+  }
 
   useEffect(() => {
     getSubscriptions()
@@ -57,6 +79,26 @@ export default function AlertSettingsPage() {
         </div>
         <button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold">
           Add Alert
+        </button>
+      </div>
+
+      {/* Push notification toggle */}
+      <div className="bg-slate-800 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold">Browser Push Notifications</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {pushEnabled ? "You will receive push alerts in this browser" : "Enable alerts even when the app is closed"}
+          </p>
+        </div>
+        <button
+          onClick={handlePushToggle}
+          disabled={pushLoading}
+          aria-label={pushEnabled ? "Disable push notifications" : "Enable push notifications"}
+          className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${pushEnabled ? "bg-blue-600" : "bg-slate-600"}`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${pushEnabled ? "translate-x-6" : "translate-x-0"}`}
+          />
         </button>
       </div>
 

@@ -78,13 +78,25 @@ async def confirm_outage(
     _: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Another user confirms an existing outage report — increases verification count."""
+    """Another user confirms an existing outage report — increases verification count.
+    When count reaches 3 the report is auto-verified and an instant SMS/push alert fires."""
+    from app.tasks.instant_alert import confirmed_outage_alert
+
     result = await db.execute(select(OutageReport).where(OutageReport.id == report_id))
     report = result.scalar_one_or_none()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
     report.verification_count += 1
-    if report.verification_count >= 3:
+
+    just_verified = not report.verified and report.verification_count >= 3
+    if just_verified:
         report.verified = True
+
+    await db.flush()
+
+    # Fire instant alerts asynchronously — don't block the HTTP response
+    if just_verified:
+        confirmed_outage_alert.delay(report.h3_index, str(report.id))
+
     return report
