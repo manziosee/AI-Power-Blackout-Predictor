@@ -27,6 +27,26 @@ class Settings(BaseSettings):
     VAPID_PUBLIC_KEY: str = ""
     VAPID_CLAIMS_EMAIL: str = "mailto:admin@blackoutpredictor.com"
 
+    # WhatsApp Business Cloud API (Meta)
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_ACCESS_TOKEN: str = ""
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = "blackout_predictor_verify"
+
+    # Telegram Bot
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_WEBHOOK_URL: str = ""   # e.g. https://yourdomain.com/api/v1/telegram/webhook
+
+    # SMTP Email
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USE_TLS: bool = True
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+
+    # App public URL (used in email links)
+    APP_URL: str = "http://localhost:5173"
+
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     class Config:

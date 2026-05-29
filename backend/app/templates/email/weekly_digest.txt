@@ -1,0 +1,26 @@
+⚡ WEEKLY OUTAGE DIGEST — {{ area }}
+=====================================
+
+LAST WEEK:     {{ outages_last_week }} outage(s)
+THIS WEEK:     {{ predictions_this_week }} predicted
+
+{% if outages_by_day %}
+DAILY BREAKDOWN
+---------------
+{% for day in outages_by_day %}
+{{ day.name }}: {{ day.count }} outage(s)
+{% endfor %}
+{% endif %}
+
+{% if high_risk_windows %}
+HIGH-RISK WINDOWS THIS WEEK
+----------------------------
+{% for w in high_risk_windows %}
+{{ w.label }}: {{ w.probability }}% risk ({{ w.risk_level }})
+{% endfor %}
+{% endif %}
+
+View live risk map: {{ app_url }}/map
+
+---
+Unsubscribe: {{ unsubscribe_url }}

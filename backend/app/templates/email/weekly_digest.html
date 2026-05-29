@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Outage Digest</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #e2e8f0; }
+    .wrapper { max-width: 560px; margin: 0 auto; padding: 32px 16px; }
+    .card { background: #1e293b; border-radius: 16px; padding: 32px; margin-bottom: 16px; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .logo { font-size: 40px; margin-bottom: 8px; }
+    h1 { font-size: 22px; font-weight: 700; color: #f8fafc; }
+    .subtitle { font-size: 14px; color: #94a3b8; margin-top: 4px; }
+    .stat-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .stat { flex: 1; background: #0f172a; border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-value { font-size: 32px; font-weight: 800; }
+    .stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+    .stat-outages .stat-value { color: #ef4444; }
+    .stat-predicted .stat-value { color: #f59e0b; }
+    h2 { font-size: 14px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+    .day-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155; font-size: 14px; }
+    .day-row:last-child { border-bottom: none; }
+    .day-name { color: #cbd5e1; }
+    .day-bar-wrap { flex: 1; margin: 0 12px; background: #0f172a; border-radius: 4px; height: 6px; overflow: hidden; }
+    .day-bar { height: 6px; background: #ef4444; border-radius: 4px; }
+    .day-count { color: #94a3b8; width: 24px; text-align: right; }
+    .risk-window { background: #0f172a; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    .risk-window .time { color: #e2e8f0; font-weight: 600; }
+    .risk-window .prob { font-weight: 700; }
+    .risk-low    { color: #22c55e; }
+    .risk-medium { color: #f59e0b; }
+    .risk-high   { color: #ef4444; }
+    .risk-critical { color: #a855f7; }
+    .cta { display: block; background: #2563eb; color: #ffffff; text-align: center; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 15px; text-decoration: none; margin-top: 8px; }
+    .footer { text-align: center; font-size: 12px; color: #475569; margin-top: 24px; line-height: 1.6; }
+    .footer a { color: #64748b; }
+    .no-data { text-align: center; color: #64748b; font-size: 14px; padding: 16px; }
+    .good-news { background: #14532d; border-radius: 12px; padding: 16px; text-align: center; color: #86efac; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <div class="header">
+      <div class="logo">⚡</div>
+      <h1>Weekly Outage Digest</h1>
+      <p class="subtitle">{{ area }}</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="card">
+      <div class="stat-row">
+        <div class="stat stat-outages">
+          <div class="stat-value">{{ outages_last_week }}</div>
+          <div class="stat-label">Outages last week</div>
+        </div>
+        <div class="stat stat-predicted">
+          <div class="stat-value">{{ predictions_this_week }}</div>
+          <div class="stat-label">Predicted this week</div>
+        </div>
+      </div>
+
+      {% if outages_last_week == 0 and predictions_this_week == 0 %}
+        <div class="good-news">✅ No outages last week and none predicted — great week!</div>
+      {% endif %}
+    </div>
+
+    <!-- Daily breakdown -->
+    {% if outages_by_day %}
+    <div class="card">
+      <h2>Last Week by Day</h2>
+      {% set max_count = outages_by_day | map(attribute='count') | max %}
+      {% for day in outages_by_day %}
+      <div class="day-row">
+        <span class="day-name">{{ day.name }}</span>
+        <div class="day-bar-wrap">
+          <div class="day-bar" style="width: {{ (day.count / [max_count, 1] | max * 100) | int }}%"></div>
+        </div>
+        <span class="day-count">{{ day.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- High-risk windows -->
+    {% if high_risk_windows %}
+    <div class="card">
+      <h2>High-Risk Windows This Week</h2>
+      {% for window in high_risk_windows %}
+      <div class="risk-window">
+        <span class="time">{{ window.label }}</span>
+        <span class="prob risk-{{ window.risk_level }}">{{ window.probability }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+      <p class="no-data">No high-risk periods predicted this week.</p>
+    </div>
+    {% endif %}
+
+    <!-- CTA -->
+    <div class="card">
+      <a href="{{ app_url }}/map" class="cta">View Live Risk Map</a>
+    </div>
+
+    <div class="footer">
+      You're receiving this because you subscribed to weekly outage digests.<br/>
+      <a href="{{ unsubscribe_url }}">Unsubscribe</a> · <a href="{{ app_url }}">Open App</a>
+    </div>
+
+  </div>
+</body>
+</html>
