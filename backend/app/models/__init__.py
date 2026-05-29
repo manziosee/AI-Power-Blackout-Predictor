@@ -5,6 +5,7 @@ from app.models.alert import AlertSubscription, SmsAlert
 from app.models.weather import WeatherSnapshot
 from app.models.neighborhood import H3Cell
 from app.models.push import PushSubscription
+from app.models.notifications import WhatsAppSubscription, TelegramSubscription, EmailSubscription
 
 __all__ = [
     "User", "UserLocation",
@@ -14,4 +15,5 @@ __all__ = [
     "WeatherSnapshot",
     "H3Cell",
     "PushSubscription",
+    "WhatsAppSubscription", "TelegramSubscription", "EmailSubscription",
 ]
