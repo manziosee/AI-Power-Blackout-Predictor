@@ -7,6 +7,10 @@ from app.models.neighborhood import H3Cell
 from app.models.push import PushSubscription
 from app.models.notifications import WhatsAppSubscription, TelegramSubscription, EmailSubscription
 from app.models.analytics import PredictionAccuracy, NeighborhoodStats
+from app.models.community import (
+    UserPoints, UserBadge, PointTransaction,
+    CommunityNote, NoteUpvote, NeighborAlertLog,
+)
 
 __all__ = [
     "User", "UserLocation",
@@ -18,4 +22,6 @@ __all__ = [
     "PushSubscription",
     "WhatsAppSubscription", "TelegramSubscription", "EmailSubscription",
     "PredictionAccuracy", "NeighborhoodStats",
+    "UserPoints", "UserBadge", "PointTransaction",
+    "CommunityNote", "NoteUpvote", "NeighborAlertLog",
 ]
