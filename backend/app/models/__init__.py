@@ -6,6 +6,7 @@ from app.models.weather import WeatherSnapshot
 from app.models.neighborhood import H3Cell
 from app.models.push import PushSubscription
 from app.models.notifications import WhatsAppSubscription, TelegramSubscription, EmailSubscription
+from app.models.analytics import PredictionAccuracy, NeighborhoodStats
 
 __all__ = [
     "User", "UserLocation",
@@ -16,4 +17,5 @@ __all__ = [
     "H3Cell",
     "PushSubscription",
     "WhatsAppSubscription", "TelegramSubscription", "EmailSubscription",
+    "PredictionAccuracy", "NeighborhoodStats",
 ]

@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     alerts,
+    analytics,
     email_alerts,
     neighborhoods,
     outages,
@@ -25,3 +26,4 @@ api_router.include_router(push.router)
 api_router.include_router(whatsapp.router)
 api_router.include_router(telegram.router)
 api_router.include_router(email_alerts.router)
+api_router.include_router(analytics.router)
