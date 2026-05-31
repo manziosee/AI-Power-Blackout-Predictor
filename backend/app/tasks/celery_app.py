@@ -15,6 +15,7 @@ celery_app = Celery(
         "app.tasks.whatsapp_alert",
         "app.tasks.telegram_alert",
         "app.tasks.email_digest",
+        "app.tasks.analytics_refresh",
     ],
 )
 
@@ -41,7 +42,15 @@ celery_app.conf.beat_schedule = {
     },
     "send-weekly-email-digest": {
         "task": "app.tasks.email_digest.send_weekly_digests",
-        "schedule": crontab(minute=0, hour=8, day_of_week="monday"),   # every Monday 08:00 UTC
+        "schedule": crontab(minute=0, hour=8, day_of_week="monday"),
+    },
+    "refresh-accuracy-daily": {
+        "task": "app.tasks.analytics_refresh.refresh_all_accuracy",
+        "schedule": crontab(minute=0, hour=3),   # 03:00 UTC daily
+    },
+    "refresh-rankings-daily": {
+        "task": "app.tasks.analytics_refresh.refresh_rankings",
+        "schedule": crontab(minute=30, hour=3),  # 03:30 UTC daily
     },
 }
 
