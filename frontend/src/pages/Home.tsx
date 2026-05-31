@@ -49,8 +49,11 @@ export default function Home() {
         <Link to="/alerts" className="bg-slate-700 hover:bg-slate-600 rounded-xl p-4 text-center font-semibold transition-colors">
           🔔 Alerts
         </Link>
-        <Link to="/analytics" className="bg-slate-700 hover:bg-slate-600 rounded-xl p-4 text-center font-semibold transition-colors col-span-2">
-          📈 Analytics &amp; Rankings
+        <Link to="/analytics" className="bg-slate-700 hover:bg-slate-600 rounded-xl p-4 text-center font-semibold transition-colors">
+          📈 Analytics
+        </Link>
+        <Link to="/community" className="bg-slate-700 hover:bg-slate-600 rounded-xl p-4 text-center font-semibold transition-colors">
+          👥 Community
         </Link>
       </div>
     </div>

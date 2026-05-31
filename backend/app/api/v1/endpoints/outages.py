@@ -37,6 +37,13 @@ async def report_outage(
     )
     db.add(report)
     await db.flush()
+
+    # Award points + trigger neighbor alert asynchronously
+    from app.services.gamification_service import award_points
+    from app.tasks.community_tasks import send_neighbor_alerts
+    await award_points(current_user.id, "report", str(report.id))
+    send_neighbor_alerts.delay(str(report.id), h3_index, str(current_user.id))
+
     return report
 
 
@@ -95,7 +102,11 @@ async def confirm_outage(
 
     await db.flush()
 
-    # Fire instant alerts asynchronously — don't block the HTTP response
+    # Award confirm points to the confirmer
+    from app.services.gamification_service import award_points
+    await award_points(_.id, "confirm", str(report.id))
+
+    # Fire instant alerts when newly verified
     if just_verified:
         confirmed_outage_alert.delay(report.h3_index, str(report.id))
 

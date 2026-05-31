@@ -16,6 +16,7 @@ celery_app = Celery(
         "app.tasks.telegram_alert",
         "app.tasks.email_digest",
         "app.tasks.analytics_refresh",
+        "app.tasks.community_tasks",
     ],
 )
 
@@ -50,7 +51,15 @@ celery_app.conf.beat_schedule = {
     },
     "refresh-rankings-daily": {
         "task": "app.tasks.analytics_refresh.refresh_rankings",
-        "schedule": crontab(minute=30, hour=3),  # 03:30 UTC daily
+        "schedule": crontab(minute=30, hour=3),
+    },
+    "reset-weekly-points": {
+        "task": "app.tasks.community_tasks.reset_weekly_points",
+        "schedule": crontab(minute=1, hour=0, day_of_week="monday"),  # Monday 00:01 UTC
+    },
+    "expire-community-notes": {
+        "task": "app.tasks.community_tasks.expire_community_notes",
+        "schedule": crontab(minute=0),   # every hour
     },
 }
 
