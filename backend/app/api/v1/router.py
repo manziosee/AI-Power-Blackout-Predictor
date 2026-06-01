@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     alerts,
     analytics,
+    business,
     community,
     email_alerts,
     neighborhoods,
@@ -12,6 +13,8 @@ from app.api.v1.endpoints import (
     reports,
     telegram,
     users,
+    utility,
+    webhooks,
     whatsapp,
 )
 
@@ -29,3 +32,6 @@ api_router.include_router(telegram.router)
 api_router.include_router(email_alerts.router)
 api_router.include_router(analytics.router)
 api_router.include_router(community.router)
+api_router.include_router(utility.router)
+api_router.include_router(business.router)
+api_router.include_router(webhooks.router)
