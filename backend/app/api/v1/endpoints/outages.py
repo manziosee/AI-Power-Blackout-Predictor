@@ -109,5 +109,7 @@ async def confirm_outage(
     # Fire instant alerts when newly verified
     if just_verified:
         confirmed_outage_alert.delay(report.h3_index, str(report.id))
+        from app.tasks.webhook_dispatch import fire_confirmed_outage_webhooks
+        fire_confirmed_outage_webhooks.delay(report.h3_index, str(report.id))
 
     return report

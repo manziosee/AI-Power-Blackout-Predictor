@@ -24,4 +24,7 @@ __all__ = [
     "PredictionAccuracy", "NeighborhoodStats",
     "UserPoints", "UserBadge", "PointTransaction",
     "CommunityNote", "NoteUpvote", "NeighborAlertLog",
+    "UtilityCompany", "BusinessProfile", "WebhookSubscription", "WebhookEvent",
 ]
+
+from app.models.enterprise import UtilityCompany, BusinessProfile, WebhookSubscription, WebhookEvent

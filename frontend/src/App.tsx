@@ -7,6 +7,7 @@ import ReportOutagePage from "./pages/ReportOutage";
 import ProfilePage from "./pages/Profile";
 import AnalyticsPage from "./pages/Analytics";
 import CommunityPage from "./pages/Community";
+import EnterprisePage from "./pages/Enterprise";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import OfflineBadge from "./components/common/OfflineBadge";
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
+        <Route path="/enterprise" element={<ProtectedRoute><EnterprisePage /></ProtectedRoute>} />
       </Routes>
     </div>
   );

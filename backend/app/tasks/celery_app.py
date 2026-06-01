@@ -17,6 +17,7 @@ celery_app = Celery(
         "app.tasks.email_digest",
         "app.tasks.analytics_refresh",
         "app.tasks.community_tasks",
+        "app.tasks.webhook_dispatch",
     ],
 )
 
@@ -59,7 +60,11 @@ celery_app.conf.beat_schedule = {
     },
     "expire-community-notes": {
         "task": "app.tasks.community_tasks.expire_community_notes",
-        "schedule": crontab(minute=0),   # every hour
+        "schedule": crontab(minute=0),
+    },
+    "dispatch-prediction-webhooks": {
+        "task": "app.tasks.webhook_dispatch.dispatch_prediction_webhooks",
+        "schedule": crontab(minute=30, hour="*/4"),  # offset from predictions run
     },
 }
 
