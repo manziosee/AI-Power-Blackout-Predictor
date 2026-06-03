@@ -18,6 +18,7 @@ celery_app = Celery(
         "app.tasks.analytics_refresh",
         "app.tasks.community_tasks",
         "app.tasks.webhook_dispatch",
+        "app.tasks.fraud_scan",
     ],
 )
 
@@ -65,6 +66,10 @@ celery_app.conf.beat_schedule = {
     "dispatch-prediction-webhooks": {
         "task": "app.tasks.webhook_dispatch.dispatch_prediction_webhooks",
         "schedule": crontab(minute=30, hour="*/4"),  # offset from predictions run
+    },
+    "fraud-scan-daily": {
+        "task": "app.tasks.fraud_scan.run_fraud_scan",
+        "schedule": crontab(minute=0, hour=2),   # 02:00 UTC daily
     },
 }
 

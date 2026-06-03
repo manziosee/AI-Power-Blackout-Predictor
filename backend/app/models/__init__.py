@@ -25,6 +25,8 @@ __all__ = [
     "UserPoints", "UserBadge", "PointTransaction",
     "CommunityNote", "NoteUpvote", "NeighborAlertLog",
     "UtilityCompany", "BusinessProfile", "WebhookSubscription", "WebhookEvent",
+    "FraudFlag",
 ]
 
 from app.models.enterprise import UtilityCompany, BusinessProfile, WebhookSubscription, WebhookEvent
+from app.models.fraud import FraudFlag

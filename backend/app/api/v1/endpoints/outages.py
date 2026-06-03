@@ -38,6 +38,10 @@ async def report_outage(
     db.add(report)
     await db.flush()
 
+    # Fraud check (non-blocking — flags written to session, committed with report)
+    from app.services.fraud_service import check_report
+    await check_report(db, report)
+
     # Award points + trigger neighbor alert asynchronously
     from app.services.gamification_service import award_points
     from app.tasks.community_tasks import send_neighbor_alerts
