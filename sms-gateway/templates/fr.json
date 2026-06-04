@@ -3,5 +3,6 @@
   "outage_confirmed": "COUPURE CONFIRMÉE dans votre zone. Signalée par plusieurs utilisateurs. Durée inconnue.",
   "outage_resolved": "ÉLECTRICITÉ RÉTABLIE dans votre zone. La coupure a duré environ {duration} minutes.",
   "welcome": "Bienvenue sur Blackout Predictor! Vous recevrez des alertes lorsque des coupures seront prévues dans votre zone.",
-  "test": "Ceci est un message test de Blackout Predictor. Vos alertes SMS fonctionnent correctement."
+  "test": "Ceci est un message test de Blackout Predictor. Vos alertes SMS fonctionnent correctement.",
+  "_raw": "{message}"
 }

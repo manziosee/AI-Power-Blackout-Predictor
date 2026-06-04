@@ -12,8 +12,10 @@ from app.api.v1.endpoints import (
     predictions,
     push,
     reports,
+    sms_inbound,
     telegram,
     users,
+    ussd,
     utility,
     webhooks,
     whatsapp,
@@ -37,3 +39,5 @@ api_router.include_router(community.router)
 api_router.include_router(utility.router)
 api_router.include_router(business.router)
 api_router.include_router(webhooks.router)
+api_router.include_router(ussd.router)
+api_router.include_router(sms_inbound.router)

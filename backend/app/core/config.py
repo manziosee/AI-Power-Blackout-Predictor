@@ -49,6 +49,10 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # USSD (Africa's Talking or compatible aggregator)
+    USSD_SHORT_CODE: str = "384"          # the *384# short code digits
+    USSD_AT_SECRET: str = ""              # AT HMAC secret; leave blank to skip verification
+
     class Config:
         env_file = ".env"
 

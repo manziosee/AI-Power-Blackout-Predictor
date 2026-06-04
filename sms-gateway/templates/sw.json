@@ -3,5 +3,6 @@
   "outage_confirmed": "KUKATIWA UMEME KUTHIBITISHWA katika eneo lako. Imeripotiwa na watumiaji wengi.",
   "outage_resolved": "UMEME UMEPATIKANA tena katika eneo lako. Kukatiwa kulichukua dakika {duration}.",
   "welcome": "Karibu kwenye Blackout Predictor! Utapokea tahadhari wakati kukatiwa umeme kunatabiriwa katika eneo lako.",
-  "test": "Hii ni ujumbe wa majaribio kutoka Blackout Predictor. Tahadhari zako za SMS zinafanya kazi vizuri."
+  "test": "Hii ni ujumbe wa majaribio kutoka Blackout Predictor. Tahadhari zako za SMS zinafanya kazi vizuri.",
+  "_raw": "{message}"
 }

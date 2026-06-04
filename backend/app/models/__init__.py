@@ -26,7 +26,9 @@ __all__ = [
     "CommunityNote", "NoteUpvote", "NeighborAlertLog",
     "UtilityCompany", "BusinessProfile", "WebhookSubscription", "WebhookEvent",
     "FraudFlag",
+    "SmsInboundLog",
 ]
 
 from app.models.enterprise import UtilityCompany, BusinessProfile, WebhookSubscription, WebhookEvent
 from app.models.fraud import FraudFlag
+from app.models.accessibility import SmsInboundLog
