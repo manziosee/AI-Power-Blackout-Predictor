@@ -32,7 +32,7 @@ async def _dispatch():
 
         # Get all active WhatsApp subscribers
         wa_subs = await db.execute(
-            select(WhatsAppSubscription).where(WhatsAppSubscription.is_active == True)
+            select(WhatsAppSubscription).where(WhatsAppSubscription.is_active)
         )
         wa_map = {s.user_id: s for s in wa_subs.scalars().all()}
 
@@ -43,7 +43,7 @@ async def _dispatch():
         alert_subs = await db.execute(
             select(AlertSubscription).where(
                 AlertSubscription.user_id.in_(wa_map.keys()),
-                AlertSubscription.is_active == True,
+                AlertSubscription.is_active,
             )
         )
 
@@ -109,7 +109,7 @@ async def _send_confirmed(h3_index: str):
         alert_subs = await db.execute(
             select(AlertSubscription).where(
                 AlertSubscription.h3_index == h3_index,
-                AlertSubscription.is_active == True,
+                AlertSubscription.is_active,
             )
         )
 
@@ -120,7 +120,7 @@ async def _send_confirmed(h3_index: str):
             wa_result = await db.execute(
                 select(WhatsAppSubscription).where(
                     WhatsAppSubscription.user_id == alert_sub.user_id,
-                    WhatsAppSubscription.is_active == True,
+                    WhatsAppSubscription.is_active,
                 )
             )
             wa_sub = wa_result.scalar_one_or_none()

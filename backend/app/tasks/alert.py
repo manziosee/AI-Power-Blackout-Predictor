@@ -1,8 +1,14 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
 
 from app.tasks.celery_app import celery_app
+
+if TYPE_CHECKING:
+    from app.models.alert import AlertSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +30,7 @@ async def _dispatch():
         since = datetime.now(timezone.utc) - timedelta(hours=4)
 
         subs_result = await db.execute(
-            select(AlertSubscription).where(AlertSubscription.is_active == True)
+            select(AlertSubscription).where(AlertSubscription.is_active)
         )
         subscriptions = subs_result.scalars().all()
 

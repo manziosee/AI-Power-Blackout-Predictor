@@ -10,7 +10,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User, UserLocation
-from app.schemas.user import Token, UserCreate, UserLocationOut, UserLogin, UserOut
+from app.schemas.user import Token, UserCreate, UserLogin, UserOut
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -106,7 +106,7 @@ async def add_location(
             select(UserLocation).where(UserLocation.user_id == current_user.id)
         )
         existing = (await db.execute(
-            select(UserLocation).where(UserLocation.user_id == current_user.id, UserLocation.is_primary == True)
+            select(UserLocation).where(UserLocation.user_id == current_user.id, UserLocation.is_primary)
         )).scalars().all()
         for loc in existing:
             loc.is_primary = False
@@ -142,7 +142,7 @@ async def update_location(
 
     if payload.is_primary:
         existing = (await db.execute(
-            select(UserLocation).where(UserLocation.user_id == current_user.id, UserLocation.is_primary == True)
+            select(UserLocation).where(UserLocation.user_id == current_user.id, UserLocation.is_primary)
         )).scalars().all()
         for other in existing:
             if other.id != location_id:

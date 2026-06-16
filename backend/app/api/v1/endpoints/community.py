@@ -96,7 +96,7 @@ async def get_notes(
     result = await db.execute(
         select(CommunityNote).where(
             CommunityNote.h3_index == h3_index,
-            CommunityNote.is_active == True,
+            CommunityNote.is_active,
             CommunityNote.expires_at > datetime.now(timezone.utc),
         ).order_by(CommunityNote.upvotes.desc(), CommunityNote.created_at.desc())
     )
@@ -118,7 +118,7 @@ async def upvote_note(
 ):
     """Upvote a community note. Each user can upvote a note once."""
     note_result = await db.execute(
-        select(CommunityNote).where(CommunityNote.id == note_id, CommunityNote.is_active == True)
+        select(CommunityNote).where(CommunityNote.id == note_id, CommunityNote.is_active)
     )
     note = note_result.scalar_one_or_none()
     if not note:

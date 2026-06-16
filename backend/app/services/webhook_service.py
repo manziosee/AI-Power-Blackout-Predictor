@@ -89,7 +89,7 @@ async def fire_prediction_webhooks(h3_index: str, probability: float, risk_level
         result = await db.execute(
             select(WebhookSubscription).where(
                 WebhookSubscription.h3_index == h3_index,
-                WebhookSubscription.is_active == True,
+                WebhookSubscription.is_active,
                 WebhookSubscription.threshold_probability <= probability,
             )
         )
@@ -136,7 +136,7 @@ async def fire_outage_confirmed_webhooks(h3_index: str, report_id: str) -> int:
         result = await db.execute(
             select(WebhookSubscription).where(
                 WebhookSubscription.h3_index == h3_index,
-                WebhookSubscription.is_active == True,
+                WebhookSubscription.is_active,
             )
         )
         subs = result.scalars().all()

@@ -23,7 +23,6 @@ def build_temporal_features(df: pd.DataFrame, country_code: str = "US") -> pd.Da
     feats["is_holiday"] = dt.dt.strftime("%m-%d").isin(holidays).astype(int)
 
     # Cyclical encoding for hour and month (avoids 23→0 discontinuity)
-    import numpy as np
     feats["hour_sin"] = (2 * 3.14159 * feats["hour"] / 24).apply(lambda x: round(float(__import__("math").sin(x)), 6))
     feats["hour_cos"] = (2 * 3.14159 * feats["hour"] / 24).apply(lambda x: round(float(__import__("math").cos(x)), 6))
     feats["month_sin"] = (2 * 3.14159 * feats["month"] / 12).apply(lambda x: round(float(__import__("math").sin(x)), 6))

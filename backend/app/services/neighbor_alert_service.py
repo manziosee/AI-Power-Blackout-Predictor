@@ -83,7 +83,7 @@ async def _find_recipients(h3_index: str, neighbor_cells: list[str], exclude_use
 
         recipients = []
         for uid in user_ids:
-            user_result = await db.execute(select(User).where(User.id == uid, User.is_active == True))
+            user_result = await db.execute(select(User).where(User.id == uid, User.is_active))
             user = user_result.scalar_one_or_none()
             if not user:
                 continue

@@ -44,12 +44,12 @@ async def _expire():
 
     from app.core.database import AsyncSessionLocal
     from app.models.community import CommunityNote
-    from sqlalchemy import select, update
+    from sqlalchemy import select
 
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(CommunityNote).where(
-                CommunityNote.is_active == True,
+                CommunityNote.is_active,
                 CommunityNote.expires_at <= datetime.now(timezone.utc),
             )
         )

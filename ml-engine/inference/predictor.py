@@ -16,7 +16,7 @@ import os
 from datetime import datetime, timezone
 
 import numpy as np
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI
 from pydantic import BaseModel
 
 from models.ensemble import EnsemblePredictor

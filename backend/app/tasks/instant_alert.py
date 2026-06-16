@@ -22,13 +22,12 @@ async def _fire_alerts(h3_index: str, report_id: str):
     from app.models.user import User
     from app.services.alert_service import send_sms_alert, send_push_notification
     from sqlalchemy import select
-    from datetime import datetime, timezone
 
     async with AsyncSessionLocal() as db:
         subs_result = await db.execute(
             select(AlertSubscription).where(
                 AlertSubscription.h3_index == h3_index,
-                AlertSubscription.is_active == True,
+                AlertSubscription.is_active,
             )
         )
         subscriptions = subs_result.scalars().all()
@@ -72,7 +71,7 @@ async def _fire_alerts(h3_index: str, report_id: str):
                     await send_push_notification(
                         user_id=str(user.id),
                         title="Outage Confirmed",
-                        body=f"Power outage confirmed in your area by multiple users.",
+                        body="Power outage confirmed in your area by multiple users.",
                     )
                 except Exception as exc:
                     logger.error(f"Push failed for {user.id}: {exc}")

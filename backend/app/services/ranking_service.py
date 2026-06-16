@@ -1,6 +1,5 @@
 """Compute and return neighborhood outage rankings."""
 import logging
-from datetime import datetime, timedelta, timezone
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +101,7 @@ async def refresh_neighborhood_stats() -> int:
                 return select(func.count()).where(
                     OutageReport.h3_index == h3,
                     OutageReport.reported_at >= since,
-                    OutageReport.verified == True,
+                    OutageReport.verified,
                 )
 
             c7  = (await db.execute(count_outages(d7))).scalar() or 0

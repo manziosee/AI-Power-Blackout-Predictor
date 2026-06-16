@@ -21,7 +21,6 @@ async def _dispatch():
     from app.models.alert import AlertSubscription
     from app.models.notifications import TelegramSubscription
     from app.models.prediction import Prediction
-    from app.models.user import User
     from app.services.telegram_service import send_outage_alert
 
     async with AsyncSessionLocal() as db:
@@ -29,7 +28,7 @@ async def _dispatch():
 
         tg_subs = await db.execute(
             select(TelegramSubscription).where(
-                TelegramSubscription.is_active == True,
+                TelegramSubscription.is_active,
                 TelegramSubscription.h3_index.isnot(None),
             )
         )
@@ -53,7 +52,7 @@ async def _dispatch():
                     select(AlertSubscription).where(
                         AlertSubscription.user_id == tg_sub.user_id,
                         AlertSubscription.h3_index == tg_sub.h3_index,
-                        AlertSubscription.is_active == True,
+                        AlertSubscription.is_active,
                     )
                 )
                 alert_sub = alert_result.scalar_one_or_none()
@@ -97,7 +96,7 @@ async def _send_confirmed(h3_index: str):
         result = await db.execute(
             select(TelegramSubscription).where(
                 TelegramSubscription.h3_index == h3_index,
-                TelegramSubscription.is_active == True,
+                TelegramSubscription.is_active,
             )
         )
         for sub in result.scalars().all():

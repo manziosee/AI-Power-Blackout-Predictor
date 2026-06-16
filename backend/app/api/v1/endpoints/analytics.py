@@ -1,6 +1,6 @@
 """Analytics endpoints — duration prediction, calendar, accuracy, rankings."""
 import calendar
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select

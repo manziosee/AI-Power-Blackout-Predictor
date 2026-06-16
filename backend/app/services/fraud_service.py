@@ -140,7 +140,7 @@ async def bulk_scan(db: AsyncSession, since_hours: int = 24) -> int:
             select(func.count()).select_from(FraudFlag).where(
                 FraudFlag.user_id == row.user_id,
                 FraudFlag.rule == "rate_limit",
-                FraudFlag.resolved == False,
+                FraudFlag.resolved.is_(False),
             )
         )).scalar_one()
         if not existing:

@@ -1,7 +1,13 @@
 """Points, badges, levels and leaderboard for community engagement."""
+from __future__ import annotations
+
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.community import UserPoints
 
 log = logging.getLogger(__name__)
 

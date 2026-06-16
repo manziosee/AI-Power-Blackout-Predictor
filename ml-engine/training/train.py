@@ -3,7 +3,6 @@ import argparse
 import logging
 
 import numpy as np
-import pandas as pd
 
 from data.processors.feature_builder import build_training_dataset
 from models.xgboost_model import XGBoostOutageModel

@@ -44,11 +44,11 @@ async def _fetch():
         month_ago = now - timedelta(days=30)
 
         # H3 cells with subscriptions
-        sub_q = select(AlertSubscription.h3_index).where(AlertSubscription.is_active == True).distinct()
+        sub_q = select(AlertSubscription.h3_index).where(AlertSubscription.is_active).distinct()
         # H3 cells with recent outages
         out_q = select(OutageReport.h3_index).where(OutageReport.reported_at >= month_ago).distinct()
         # H3 cells with user locations
-        loc_q = select(UserLocation.h3_index).where(UserLocation.is_active == True).distinct()
+        loc_q = select(UserLocation.h3_index).where(UserLocation.is_active).distinct()
 
         active_idx_res = await db.execute(union(sub_q, out_q, loc_q))
         active_h3_set = {row[0] for row in active_idx_res.all()}

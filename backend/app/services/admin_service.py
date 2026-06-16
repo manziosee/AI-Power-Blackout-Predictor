@@ -47,7 +47,7 @@ async def get_platform_stats(db: AsyncSession) -> dict:
 
     # Fraud
     open_flags = (await db.execute(
-        select(func.count()).select_from(FraudFlag).where(FraudFlag.resolved == False)
+        select(func.count()).select_from(FraudFlag).where(FraudFlag.resolved.is_(False))
     )).scalar_one()
 
     return {

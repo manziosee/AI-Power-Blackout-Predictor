@@ -36,7 +36,7 @@ async def compute_accuracy(h3_index: str, days: int = 30) -> dict:
                 OutageReport.h3_index == h3_index,
                 OutageReport.reported_at >= start,
                 OutageReport.reported_at <= end,
-                OutageReport.verified == True,
+                OutageReport.verified,
             )
         )
         outages = outages_result.scalars().all()

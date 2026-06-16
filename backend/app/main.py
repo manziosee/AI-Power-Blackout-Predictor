@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.core.database import engine
 from app.models import *  # noqa: F401,F403 — ensure all models are registered
 
 

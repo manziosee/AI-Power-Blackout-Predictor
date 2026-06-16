@@ -8,7 +8,6 @@ Strategy:
      is trained and used instead of the percentile approach.
 """
 import logging
-from statistics import median, quantiles
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ async def _get_historical_durations(h3_index: str) -> list[float]:
                 OutageReport.h3_index == h3_index,
                 OutageReport.duration_minutes.isnot(None),
                 OutageReport.duration_minutes > 0,
-                OutageReport.verified == True,
+                OutageReport.verified,
             )
         )
         return [float(r[0]) for r in result.fetchall()]
@@ -97,7 +96,7 @@ async def _get_city_durations(h3_index: str) -> list[float]:
                 OutageReport.h3_index.in_(cell_indices),
                 OutageReport.duration_minutes.isnot(None),
                 OutageReport.duration_minutes > 0,
-                OutageReport.verified == True,
+                OutageReport.verified,
             ).limit(500)
         )
         return [float(r[0]) for r in result.fetchall()]

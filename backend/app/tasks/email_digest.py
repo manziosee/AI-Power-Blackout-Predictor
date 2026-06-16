@@ -14,7 +14,7 @@ def send_weekly_digests():
 
 
 async def _send_all():
-    from sqlalchemy import func, select
+    from sqlalchemy import select
 
     from app.core.config import settings
     from app.core.database import AsyncSessionLocal
@@ -22,12 +22,11 @@ async def _send_all():
     from app.models.notifications import EmailSubscription
     from app.models.outage import OutageReport
     from app.models.prediction import Prediction
-    from app.models.user import User
     from app.services.email_service import send_weekly_digest_email
 
     async with AsyncSessionLocal() as db:
         subs_result = await db.execute(
-            select(EmailSubscription).where(EmailSubscription.is_active == True)
+            select(EmailSubscription).where(EmailSubscription.is_active)
         )
         subscriptions = subs_result.scalars().all()
 
@@ -42,7 +41,7 @@ async def _send_all():
                     select(OutageReport).where(
                         OutageReport.h3_index == sub.h3_index,
                         OutageReport.reported_at >= week_ago,
-                        OutageReport.verified == True,
+                        OutageReport.verified,
                     )
                 )
                 outages = outage_result.scalars().all()

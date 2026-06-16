@@ -39,7 +39,6 @@ def _resolve_region(country_code: str | None) -> str:
 # ── Rule-based fallback ───────────────────────────────────────────────────────
 
 def _rule_based(rain: float, wind: float, hour: int, outages_7d: int) -> float:
-    from app.services.outage_service import classify_risk as _cr
     p = (
         min(rain / 50.0, 1.0) * 0.35
         + min(wind / 20.0, 1.0) * 0.25
@@ -50,9 +49,12 @@ def _rule_based(rain: float, wind: float, hour: int, outages_7d: int) -> float:
 
 
 def _classify(p: float) -> str:
-    if p >= 0.80: return "VERY_HIGH"
-    if p >= 0.60: return "HIGH"
-    if p >= 0.35: return "MEDIUM"
+    if p >= 0.80:
+        return "VERY_HIGH"
+    if p >= 0.60:
+        return "HIGH"
+    if p >= 0.35:
+        return "MEDIUM"
     return "LOW"
 
 

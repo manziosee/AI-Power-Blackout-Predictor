@@ -179,7 +179,7 @@ async def _get_user_and_location(phone: str, db: AsyncSession):
         return None, None
     loc_result = await db.execute(
         select(UserLocation)
-        .where(UserLocation.user_id == user.id, UserLocation.is_active == True)
+        .where(UserLocation.user_id == user.id, UserLocation.is_active)
         .order_by(UserLocation.is_primary.desc())
         .limit(1)
     )

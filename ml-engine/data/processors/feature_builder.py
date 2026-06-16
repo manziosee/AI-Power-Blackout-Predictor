@@ -44,7 +44,6 @@ def build_training_dataset(country_codes: list[str]) -> tuple[np.ndarray, np.nda
 
     from features.weather_features import build_weather_features
     from features.temporal_features import build_temporal_features
-    from features.historical_features import build_historical_features
 
     weather_feats = build_weather_features(df)
     temporal_feats = build_temporal_features(df, country_codes[0] if country_codes else "US")

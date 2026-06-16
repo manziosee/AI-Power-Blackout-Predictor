@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.models.alert import AlertSubscription
 from app.models.outage import OutageReport
 from app.models.prediction import Prediction
@@ -154,7 +153,7 @@ async def _get_user(phone: str, db: AsyncSession) -> User | None:
 async def _primary_location(user: User, db: AsyncSession) -> UserLocation | None:
     result = await db.execute(
         select(UserLocation)
-        .where(UserLocation.user_id == user.id, UserLocation.is_active == True)
+        .where(UserLocation.user_id == user.id, UserLocation.is_active)
         .order_by(UserLocation.is_primary.desc())
         .limit(1)
     )

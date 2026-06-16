@@ -1,7 +1,6 @@
 """Utility Company Dashboard API — B2B portal for power companies."""
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import List
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, EmailStr
@@ -10,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.enterprise import UtilityCompany
-from app.models.neighborhood import H3Cell
 from app.models.outage import OutageReport
 from app.models.prediction import Prediction
 
@@ -27,7 +25,7 @@ async def get_utility(
     result = await db.execute(
         select(UtilityCompany).where(
             UtilityCompany.api_key == x_api_key,
-            UtilityCompany.is_active == True,
+            UtilityCompany.is_active,
         )
     )
     company = result.scalar_one_or_none()
@@ -83,7 +81,7 @@ async def dashboard(
         if base:
             q = q.where(OutageReport.h3_index.in_(base))
         if verified_only:
-            q = q.where(OutageReport.verified == True)
+            q = q.where(OutageReport.verified)
         return (await db.execute(q)).scalar() or 0
 
     total_24h   = await count(d24)
@@ -155,7 +153,7 @@ async def live_outages(
     if base:
         q = q.where(OutageReport.h3_index.in_(base))
     if verified_only:
-        q = q.where(OutageReport.verified == True)
+        q = q.where(OutageReport.verified)
 
     result = await db.execute(q)
     outages = result.scalars().all()
@@ -264,7 +262,7 @@ async def most_affected(
             func.count().label("outage_count"),
             func.avg(OutageReport.duration_minutes).label("avg_duration"),
         )
-        .where(OutageReport.reported_at >= since, OutageReport.verified == True)
+        .where(OutageReport.reported_at >= since, OutageReport.verified)
         .group_by(OutageReport.h3_index)
         .order_by(func.count().desc())
         .limit(limit)

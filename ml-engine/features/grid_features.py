@@ -1,5 +1,4 @@
 import h3
-import pandas as pd
 
 
 COUNTRY_GRID_TYPE = {
