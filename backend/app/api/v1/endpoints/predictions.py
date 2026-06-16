@@ -4,11 +4,30 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.prediction import Prediction
+from app.models.user import User
 from app.schemas.prediction import HeatmapCell, PredictionOut
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
+
+
+@router.get("/", response_model=List[PredictionOut])
+async def list_predictions(
+    h3_index: str = Query(..., description="H3 cell index"),
+    limit: int = Query(default=6, le=24),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List predictions for an H3 cell. Requires authentication."""
+    result = await db.execute(
+        select(Prediction)
+        .where(Prediction.h3_index == h3_index)
+        .order_by(Prediction.predicted_at.desc())
+        .limit(limit)
+    )
+    return result.scalars().all()
 
 
 @router.get("/cell/{h3_index}", response_model=List[PredictionOut])
