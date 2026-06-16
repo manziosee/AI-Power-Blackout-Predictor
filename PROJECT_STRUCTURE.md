@@ -71,14 +71,10 @@ ai-power-blackout-predictor/
 │   │   │   ├── router.py             # Route by country code → SMPP connector
 │   │   │   └── templates.py          # Format messages per language
 │   │   └── main.py
-│   ├── connectors/                   # One file per telecom operator
+│   ├── connectors/                   # SMPP connectors — operator-agnostic
 │   │   ├── base.py                   # Abstract base connector
-│   │   ├── mtn_rw.py                 # MTN Rwanda SMPP
-│   │   ├── airtel_rw.py              # Airtel Rwanda SMPP
-│   │   ├── safaricom_ke.py           # Safaricom Kenya SMPP
-│   │   ├── mtn_ng.py                 # MTN Nigeria SMPP
-│   │   ├── orange_sn.py              # Orange Senegal SMPP
-│   │   └── fallback.py               # Aggregator fallback (unrouted countries)
+│   │   ├── jasmin.py                 # Generic JasminConnector (all countries/operators)
+│   │   └── fallback.py               # No-op fallback (logs, never throws)
 │   ├── templates/                    # SMS message templates per language
 │   │   ├── en.json
 │   │   ├── fr.json
@@ -324,7 +320,7 @@ CREATE TABLE sms_alerts (
     prediction_id   UUID REFERENCES predictions(id),
     sent_at         TIMESTAMP DEFAULT NOW(),
     status          VARCHAR(20),                   -- 'queued', 'sent', 'delivered', 'failed'
-    provider        VARCHAR(30),                   -- 'jasmin_mtn_rw', 'jasmin_airtel_rw'
+    provider        VARCHAR(30),                   -- 'jasmin', 'fallback'
     smpp_message_id VARCHAR(50),
     error_message   TEXT
 );
@@ -358,9 +354,9 @@ CREATE TABLE alert_subscriptions (
     ├── 1. Load template in user's language
     │       "Imbaraga: amashanyarazi azima mu gace kawe saa 12:00 (82%)"
     │
-    ├── 2. Route by country code (+250 → RW → MTN Rwanda SMPP)
+    ├── 2. Route via JASMIN_CONNECTOR_{CC} env var (country-agnostic)
     │
-    └── 3. Submit to Jasmin HTTP API → Jasmin → SMPP → MTN → Phone
+    └── 3. Submit to Jasmin HTTP API → Jasmin → SMPP → Any operator worldwide → Phone
 ```
 
 ### SMS Templates Example (outage_warning)

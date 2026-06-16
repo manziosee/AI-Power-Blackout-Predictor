@@ -279,12 +279,13 @@ uvicorn inference.predictor:app --port 8002 --reload
 | `SECRET_KEY` | JWT signing secret | `64-char-random-string` |
 | `DATABASE_URL` | Async PostgreSQL URL | `postgresql+asyncpg://...` |
 | `REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
-| `OPENWEATHERMAP_API_KEY` | OWM API key | `abc123...` |
-| `VITE_MAPBOX_TOKEN` | Mapbox public token | `pk.eyJ1...` |
+| `OPENWEATHERMAP_API_KEY` | OWM API key (free tier, global) | `abc123...` |
+| `ML_ENGINE_URL` | ML engine microservice URL | `http://ml-engine:8002` |
 | `JASMIN_HOST` | Jasmin container hostname | `jasmin` |
-| `MTN_RW_SMPP_HOST` | MTN Rwanda SMPP endpoint | `smpp.mtn.co.rw` |
-| `MTN_RW_SMPP_USERNAME` | SMPP username from telecom | `your-username` |
-| `FALLBACK_SMPP_HOST` | Aggregator for other countries | `smpp.aggregator.com` |
+| `SMPP_HOST` | Your SMPP aggregator endpoint | `smpp.your-aggregator.com` |
+| `SMPP_USERNAME` | SMPP username | `your-username` |
+| `JASMIN_CONNECTOR_DEFAULT` | Default Jasmin connector ID | `default` |
+| `USSD_SHORT_CODE` | USSD short code digits | `384` |
 
 See [`.env.example`](.env.example) for the full list.
 
@@ -298,12 +299,12 @@ Instead of paying per-SMS to Twilio or Africa's Talking, this project runs its *
 Your App
    ↓  POST /sms/send  { to, country, lang, template, vars }
 SMS Gateway API  (port 8001)
-   ↓  Selects connector by country code
+   ↓  Routes via JASMIN_CONNECTOR_{CC} env var
 Jasmin Gateway  (port 8080)
-   ↓  SMPP v3.4 protocol
-Telecom Operator  (MTN, Airtel, Safaricom, Orange…)
+   ↓  SMPP v3.4 protocol  (operator-agnostic)
+Any SMPP aggregator worldwide  (Sinch, Infobip, Vonage, AT, direct operator…)
    ↓
-User's Phone
+User's Phone  (any country, any network)
 ```
 
 ### Cost comparison
@@ -316,10 +317,14 @@ User's Phone
 
 ### Adding a new country/operator
 
-1. Get SMPP credentials from the telecom's business/enterprise team
-2. Create a connector file in `sms-gateway/connectors/` modeled on [`mtn_rw.py`](sms-gateway/connectors/mtn_rw.py)
-3. Register it in [`api/services/router.py`](sms-gateway/api/services/router.py)
-4. Add the connector to Jasmin via CLI or `jasmin/connectors.cfg`
+No code changes needed. Just set environment variables:
+
+1. Get SMPP credentials from your aggregator (Sinch, Infobip, Vonage, etc.) or directly from the local telecom
+2. Set `SMPP_HOST`, `SMPP_USERNAME`, `SMPP_PASSWORD` in `.env`
+3. Optionally set `JASMIN_CONNECTOR_{CC}` for per-country routing (e.g. `JASMIN_CONNECTOR_NG=ng_connector`)
+4. Configure the connector in Jasmin via CLI or `sms-gateway/jasmin/connectors.cfg`
+
+The single [`JasminConnector`](sms-gateway/connectors/jasmin.py) handles all countries.
 
 ---
 

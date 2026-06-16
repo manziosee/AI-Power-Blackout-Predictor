@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     USSD_SHORT_CODE: str = "384"          # the *384# short code digits
     USSD_AT_SECRET: str = ""              # AT HMAC secret; leave blank to skip verification
 
+    # ML Engine
+    ML_ENGINE_URL: str = "http://ml-engine:8002"
+
     class Config:
         env_file = ".env"
 

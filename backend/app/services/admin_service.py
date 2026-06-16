@@ -100,40 +100,30 @@ async def get_accuracy_by_country(db: AsyncSession) -> list[dict]:
 def get_smpp_connectors() -> list[dict]:
     """
     Returns configured SMPP connectors and their status.
-    In production this would query Jasmin's HTTP API; here we return
-    the statically-configured connectors so ops can see what's wired up.
+    Reads from the generic Jasmin connector env vars — works for any
+    global aggregator (Sinch, Infobip, Vonage, local telco SMPP, etc.).
     """
     import os
     connectors = [
         {
-            "id": "mtn_rw",
-            "operator": "MTN Rwanda",
-            "country": "RW",
-            "host": os.getenv("MTN_RW_SMPP_HOST", ""),
-            "configured": bool(os.getenv("MTN_RW_SMPP_HOST")),
-        },
-        {
-            "id": "airtel_rw",
-            "operator": "Airtel Rwanda",
-            "country": "RW",
-            "host": os.getenv("AIRTEL_RW_SMPP_HOST", ""),
-            "configured": bool(os.getenv("AIRTEL_RW_SMPP_HOST")),
-        },
-        {
-            "id": "safaricom_ke",
-            "operator": "Safaricom Kenya",
-            "country": "KE",
-            "host": os.getenv("SAFARICOM_SMPP_HOST", ""),
-            "configured": bool(os.getenv("SAFARICOM_SMPP_HOST")),
-        },
-        {
-            "id": "fallback",
-            "operator": "Fallback Aggregator",
+            "id": "default",
+            "operator": os.getenv("SMPP_OPERATOR_NAME", "Primary SMPP Aggregator"),
             "country": "ALL",
-            "host": os.getenv("FALLBACK_SMPP_HOST", ""),
-            "configured": bool(os.getenv("FALLBACK_SMPP_HOST")),
+            "host": os.getenv("SMPP_HOST", ""),
+            "configured": bool(os.getenv("SMPP_HOST")),
         },
     ]
+    # Surface any additional connectors defined via SMPP2_HOST, SMPP3_HOST, etc.
+    for i in range(2, 6):
+        host = os.getenv(f"SMPP{i}_HOST", "")
+        if host:
+            connectors.append({
+                "id": f"connector{i}",
+                "operator": os.getenv(f"SMPP{i}_OPERATOR_NAME", f"Aggregator {i}"),
+                "country": os.getenv(f"SMPP{i}_COUNTRY", "ALL"),
+                "host": host,
+                "configured": True,
+            })
     return connectors
 
 
