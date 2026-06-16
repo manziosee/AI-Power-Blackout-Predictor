@@ -1,248 +1,222 @@
 <div align="center">
 
-# ⚡ AI Power Blackout Predictor
+# AI Power Blackout Predictor
 
 **Predict electricity outages before they happen — anywhere in the world.**
 
-AI-powered platform that combines crowdsourced outage reports, real-time weather data, and machine learning to predict power blackouts at the neighborhood level. Sends SMS alerts via your own SMPP gateway, renders live heatmaps, and works offline.
-
-<br/>
+AI-powered platform that combines crowdsourced outage reports, real-time weather data, and machine learning to predict power blackouts at the neighborhood level. Sends SMS alerts via your own SMPP gateway (Jasmin), renders live heatmaps, and works offline.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](https://github.com/your-org/ai-power-blackout-predictor/pulls)
-[![Made with Love](https://img.shields.io/badge/Made%20with-Love-red.svg?style=for-the-badge)](#)
+[![CI](https://github.com/manziosee/AI-Power-Blackout-Predictor/actions/workflows/ci.yml/badge.svg)](https://github.com/manziosee/AI-Power-Blackout-Predictor/actions)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](https://github.com/manziosee/AI-Power-Blackout-Predictor/pulls)
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Services](#-services)
-- [Getting Started](#-getting-started)
-- [Environment Variables](#-environment-variables)
-- [SMS Gateway](#-sms-gateway--jasmin--smpp)
-- [ML Engine](#-ml-engine)
-- [Supported Languages](#-supported-languages)
-- [Build Phases](#-build-phases)
-- [License](#-license)
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Database Setup (Supabase)](#database-setup-supabase)
+- [Environment Variables](#environment-variables)
+- [SMS Gateway — Jasmin + SMPP](#sms-gateway--jasmin--smpp)
+- [ML Engine](#ml-engine)
+- [AI Insights (Groq LLM)](#ai-insights-groq-llm)
+- [Supported Languages](#supported-languages)
+- [API Reference](#api-reference)
+- [CI/CD](#cicd)
+- [Build Phases](#build-phases)
+- [License](#license)
 
 ---
 
-## 🌍 Overview
+## Overview
 
 Electricity outages are one of the most disruptive daily challenges across Africa, Asia, Latin America, and developing regions worldwide. This platform uses **AI + crowdsourcing** to predict outages hours before they happen and warn residents via SMS — even on feature phones with no internet.
 
-It is built to scale globally, with per-region ML models, multi-language SMS alerts, and a fully offline-capable Progressive Web App.
+Built to scale globally, with per-region ML models, multi-language SMS alerts, a fully offline-capable Progressive Web App, USSD fallback (`*384#`), and two-way SMS interaction.
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 | Feature | Description |
 |---|---|
-| 🤖 **AI Predictions** | XGBoost + Prophet ensemble predicts outage probability per neighborhood cell |
-| 📡 **Your Own SMS Gateway** | Jasmin + SMPP connects directly to telecom operators — no Twilio fees |
-| 🗺️ **Neighborhood Heatmaps** | Uber H3 hexagonal grid renders real-time risk maps worldwide |
-| 📴 **Offline Support** | PWA with Service Workers + IndexedDB — works without internet |
-| 👥 **Crowdsourced Reports** | Users confirm outages via app or SMS — feeds the ML model |
-| 🌐 **7 Languages** | English, French, Swahili, Kinyarwanda, Arabic, Spanish, Portuguese |
-| ⏰ **4-Hour Predictions** | Runs every 4 hours, checks weather + history + grid patterns |
-| 🔔 **Multi-channel Alerts** | SMS, push notifications, and email — user-configurable thresholds |
+| **AI Predictions** | XGBoost + Prophet ensemble predicts outage probability per neighborhood cell |
+| **AI Explanations** | Groq LLM (llama-3.1-8b-instant) generates plain-language risk summaries in 7 languages |
+| **Own SMS Gateway** | Jasmin + SMPP connects directly to any telecom operator worldwide — no per-SMS vendor fees |
+| **Neighborhood Heatmaps** | Uber H3 hexagonal grid renders real-time risk maps worldwide |
+| **Offline Support** | PWA with Service Workers + IndexedDB — works without internet |
+| **USSD Fallback** | `*384#` works on any feature phone, no internet required |
+| **Two-Way SMS** | Users can report outages and query predictions by SMS |
+| **Crowdsourced Reports** | App and SMS reports feed the ML model — 3-report consensus verifies outages |
+| **7 Languages** | English, French, Swahili, Kinyarwanda, Arabic, Spanish, Portuguese |
+| **4-Hour Predictions** | Runs every 4 hours, checks weather + history + grid patterns |
+| **Multi-Channel Alerts** | SMS, push notifications, email, Telegram, WhatsApp — user-configurable thresholds |
+| **Admin Dashboard** | Fraud detection, multi-location tracking, platform operations |
+| **Enterprise API** | Utility companies and governments can subscribe via webhook |
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        FRONTEND (PWA)                       │
-│          React · Mapbox Heatmap · Offline-first             │
+│   React 18 · Mapbox Heatmap · Offline-first · i18n (7 lang)│
 └───────────────────────┬─────────────────────────────────────┘
-                        │ REST API
+                        │ REST API (FastAPI)
 ┌───────────────────────▼─────────────────────────────────────┐
 │                    BACKEND (FastAPI)                         │
-│     Users · Predictions · Outages · Alerts · H3 Cells       │
-│                  Celery Tasks (every 4h)                     │
+│     Auth · Users · Predictions · Outages · Alerts           │
+│     Admin · Analytics · Community · Enterprise · USSD       │
+│                  Celery Beat (every 4h)                      │
 └──────┬──────────────────────┬──────────────────────┬────────┘
        │                      │                      │
 ┌──────▼──────┐   ┌───────────▼──────────┐  ┌──────▼────────┐
 │  ML ENGINE  │   │     DATA PIPELINE    │  │  SMS GATEWAY  │
-│  XGBoost    │   │  Weather · ENTSO-E   │  │ Jasmin + SMPP │
-│  Prophet    │   │  EIA · Crowdsource   │  │  Per-country  │
-│  Ensemble   │   │  H3 Mapper · Cron    │  │  connectors   │
+│  XGBoost    │   │  OpenWeatherMap      │  │ Jasmin + SMPP │
+│  Prophet    │   │  Crowdsource ingest  │  │  Generic env  │
+│  Groq LLM   │   │  H3 Mapper · Cron   │  │  var routing  │
 └─────────────┘   └──────────────────────┘  └───────────────┘
        │                      │                      │
 ┌──────▼──────────────────────▼──────────────────────▼────────┐
-│           PostgreSQL + PostGIS · Redis · RabbitMQ            │
+│           Supabase (PostgreSQL) · Redis · RabbitMQ           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Data flow:**
 1. **OpenWeatherMap** → Weather snapshots stored per H3 cell hourly
-2. **Users** → Report outages via app / SMS → verified by 3-report consensus
+2. **Users** → Report outages via app / SMS / USSD → 3-report consensus verifies
 3. **Celery** → Runs predictions every 4h per cell → stores probability + risk level
-4. **Alert checker** → Matches predictions against user subscriptions → fires SMS / push
-5. **Frontend** → Reads predictions → renders heatmap → shows risk for user's location
+4. **Groq LLM** → Generates human-readable explanation in user's language
+5. **Alert checker** → Matches predictions against subscriptions → fires SMS / push / email / Telegram
+6. **Frontend** → Reads predictions → renders heatmap → shows risk for user's location
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
-
-![Python](https://img.shields.io/badge/Python_3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=python&logoColor=white)
-![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white)
-![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
-
----
+- **Python 3.12** · **FastAPI** (async) · **SQLAlchemy 2.x** · **Alembic** migrations
+- **Celery + Celery Beat** for scheduled prediction tasks
+- **Pydantic v2** for schema validation
+- **passlib + bcrypt** for password hashing
+- **python-jose** for JWT tokens
 
 ### Database & Cache
-
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
-![PostGIS](https://img.shields.io/badge/PostGIS-336791?style=for-the-badge&logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis_7-DC382D?style=for-the-badge&logo=redis&logoColor=white)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
-
----
+- **Supabase** (PostgreSQL 15) — cloud-hosted, free tier for development
+- **Redis 7** — Celery broker + response cache
+- **RabbitMQ** — Jasmin message queue
 
 ### Machine Learning
-
-![XGBoost](https://img.shields.io/badge/XGBoost-189ABC?style=for-the-badge&logo=python&logoColor=white)
-![Prophet](https://img.shields.io/badge/Facebook_Prophet-1877F2?style=for-the-badge&logo=meta&logoColor=white)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)
-![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
-
----
+- **XGBoost** — primary classifier (70% ensemble weight)
+- **Prophet** — 7-day trend model (30% ensemble weight)
+- **scikit-learn** · **NumPy** · **Pandas**
+- **Groq** (llama-3.1-8b-instant) — AI explanation generation
 
 ### SMS & Messaging
-
-![Jasmin](https://img.shields.io/badge/Jasmin_SMS_Gateway-FF6B35?style=for-the-badge&logo=message&logoColor=white)
-![SMPP](https://img.shields.io/badge/SMPP_v3.4-2C3E50?style=for-the-badge&logoColor=white)
-
----
+- **Jasmin** open-source SMS gateway (SMPP v3.4) — generic, works with any aggregator
+- **SMPP** credentials via env vars — no country-specific connectors in code
+- Inbound SMS parsing + two-way interaction
+- USSD handler (`*384#`)
 
 ### Frontend
-
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React_18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![Mapbox](https://img.shields.io/badge/Mapbox_GL_JS-000000?style=for-the-badge&logo=mapbox&logoColor=white)
-![Zustand](https://img.shields.io/badge/Zustand-443E38?style=for-the-badge&logo=react&logoColor=white)
-![i18next](https://img.shields.io/badge/i18next-26A69A?style=for-the-badge&logo=i18next&logoColor=white)
-
----
+- **React 18** · **TypeScript** · **Vite** · **Tailwind CSS**
+- **Mapbox GL JS** — heatmap visualization
+- **Zustand** — state management
+- **i18next** — 7-language support
+- **PWA** with Service Worker + IndexedDB offline storage
 
 ### Geospatial
-
-![Uber H3](https://img.shields.io/badge/Uber_H3-000000?style=for-the-badge&logo=uber&logoColor=white)
-
-> **H3** is Uber's hexagonal hierarchical geospatial indexing system. Every neighborhood in the world is mapped to a hexagonal cell — resolution 8 gives ~460m cells, perfect for neighborhood-level predictions.
-
----
+- **Uber H3** (resolution 8) — ~460m hexagonal cells, worldwide coverage
 
 ### Infrastructure
-
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
-![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
-
----
+- **Docker Compose** — full local stack
+- **Nginx** — reverse proxy (production)
 
 ### External APIs
-
-![OpenWeatherMap](https://img.shields.io/badge/OpenWeatherMap-EB6E4B?style=for-the-badge&logo=openweathermap&logoColor=white)
-![ENTSO-E](https://img.shields.io/badge/ENTSO--E_(Europe_Grid)-003DA5?style=for-the-badge&logoColor=white)
-![EIA](https://img.shields.io/badge/EIA_(US_Grid)-004990?style=for-the-badge&logoColor=white)
+- **OpenWeatherMap** — weather forecasts (free tier, global)
+- **Groq API** — LLM inference (free tier available)
 
 ---
 
-## 📦 Services
-
-The project is composed of **5 containerized microservices** + supporting infrastructure:
+## Project Structure
 
 ```
 ai-power-blackout-predictor/
 │
-├── backend/           → FastAPI REST API                  (port 8000)
-├── sms-gateway/       → Jasmin SMS wrapper API            (port 8001)
-├── ml-engine/         → ML inference + training server    (port 8002)
-├── frontend/          → React PWA                         (port 5173)
-├── data-pipeline/     → Weather + crowdsource ETL cron
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/endpoints/   → auth, predictions, outages, alerts, insights, admin
+│   │   ├── core/               → config, database, security
+│   │   ├── models/             → SQLAlchemy ORM models
+│   │   ├── schemas/            → Pydantic request/response schemas
+│   │   ├── services/           → weather, SMS (Jasmin), Groq LLM
+│   │   └── tasks/              → Celery tasks (predict, alert dispatch)
+│   ├── migrations/versions/    → Alembic migration chain (0001→0007)
+│   ├── scripts/
+│   │   └── bootstrap_supabase.sql  → one-shot Supabase DB init
+│   ├── tests/                  → pytest test suite
+│   └── requirements.txt
 │
-└── infrastructure/
-    ├── postgres/      → PostgreSQL + PostGIS init SQL
-    ├── nginx/         → Reverse proxy config
-    └── redis/         → Redis config
+├── frontend/                   → React PWA
+├── sms-gateway/                → Jasmin wrapper microservice
+├── ml-engine/                  → XGBoost + Prophet training + inference
+├── data-pipeline/              → ETL cron jobs
+└── docker-compose.yml
 ```
-
-| Service | Port | Description |
-|---|---|---|
-| Backend API | `8000` | FastAPI — predictions, users, alerts, outage reports |
-| SMS Gateway | `8001` | Your own SMS microservice wrapping Jasmin |
-| ML Engine | `8002` | XGBoost + Prophet prediction API |
-| Frontend | `5173` | React PWA — heatmaps, offline, 7 languages |
-| PostgreSQL | `5432` | Main database with PostGIS extension |
-| Redis | `6379` | Cache + Celery task broker |
-| RabbitMQ | `5672` | Jasmin message queue |
-| RabbitMQ UI | `15672` | RabbitMQ management dashboard |
-| Jasmin HTTP | `8080` | Jasmin internal HTTP API |
-| Nginx | `80` | Reverse proxy (production) |
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 - [Git](https://git-scm.com/)
-- An [OpenWeatherMap API key](https://openweathermap.org/api) (free tier works)
+- A [Supabase](https://supabase.com) project (free tier)
+- An [OpenWeatherMap API key](https://openweathermap.org/api) (free tier)
 
 ### 1 — Clone & configure
 
 ```bash
-git clone https://github.com/your-org/ai-power-blackout-predictor.git
-cd ai-power-blackout-predictor
+git clone https://github.com/manziosee/AI-Power-Blackout-Predictor.git
+cd AI-Power-Blackout-Predictor
 
-# Copy and edit environment variables
 cp .env.example .env
 ```
 
-Open `.env` and set at minimum:
-```env
-OPENWEATHERMAP_API_KEY=your-key-here
-SECRET_KEY=your-random-64-char-secret
-VITE_MAPBOX_TOKEN=your-mapbox-token
-```
+Edit `.env` with your credentials (see [Environment Variables](#environment-variables) below).
 
-### 2 — Start all services
+### 2 — Initialize the database
+
+Open your Supabase project → **SQL Editor** and paste the entire contents of [backend/scripts/bootstrap_supabase.sql](backend/scripts/bootstrap_supabase.sql). Run it once. This creates all 20+ tables and marks Alembic as fully migrated to revision `0007`.
+
+### 3 — Start all services
 
 ```bash
 docker-compose up -d
 ```
 
-### 3 — Seed neighborhood cells
+### 4 — Seed neighborhood cells
 
 ```bash
-# Seeds H3 cells for 12 major cities worldwide
 docker-compose exec data-pipeline python processors/h3_mapper.py
 ```
 
-### 4 — Open the app
+### 5 — Open the app
 
 | URL | Description |
 |---|---|
 | `http://localhost:5173` | React frontend |
 | `http://localhost:8000/docs` | Swagger API docs |
+| `http://localhost:8000/redoc` | ReDoc API docs |
 | `http://localhost:15672` | RabbitMQ dashboard (`guest/guest`) |
 
 ### Local development (without Docker)
@@ -250,7 +224,9 @@ docker-compose exec data-pipeline python processors/h3_mapper.py
 ```bash
 # Backend
 cd backend
-python -m venv .venv && .venv\Scripts\activate   # Windows
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 
@@ -259,53 +235,81 @@ cd frontend
 npm install
 npm run dev
 
-# SMS Gateway
-cd sms-gateway
-pip install -r requirements.txt
-uvicorn api.main:app --port 8001 --reload
-
-# ML Engine
-cd ml-engine
-pip install -r requirements.txt
-uvicorn inference.predictor:app --port 8002 --reload
+# Run tests
+cd backend
+pytest
 ```
 
 ---
 
-## 🔧 Environment Variables
+## Database Setup (Supabase)
 
-| Variable | Description | Example |
-|---|---|---|
-| `SECRET_KEY` | JWT signing secret | `64-char-random-string` |
-| `DATABASE_URL` | Async PostgreSQL URL | `postgresql+asyncpg://...` |
-| `REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
-| `OPENWEATHERMAP_API_KEY` | OWM API key (free tier, global) | `abc123...` |
-| `ML_ENGINE_URL` | ML engine microservice URL | `http://ml-engine:8002` |
-| `JASMIN_HOST` | Jasmin container hostname | `jasmin` |
-| `SMPP_HOST` | Your SMPP aggregator endpoint | `smpp.your-aggregator.com` |
-| `SMPP_USERNAME` | SMPP username | `your-username` |
-| `JASMIN_CONNECTOR_DEFAULT` | Default Jasmin connector ID | `default` |
-| `USSD_SHORT_CODE` | USSD short code digits | `384` |
+All tables are defined in [backend/scripts/bootstrap_supabase.sql](backend/scripts/bootstrap_supabase.sql). Run it once in the Supabase SQL Editor.
 
-See [`.env.example`](.env.example) for the full list.
+Tables created (grouped by migration revision):
+
+| Revision | Tables |
+|---|---|
+| 0001 | `h3_cells`, `users`, `user_locations`, `outage_reports`, `predictions`, `weather_snapshots`, `alert_subscriptions`, `push_subscriptions`, `sms_alerts` |
+| 0002 | `whatsapp_subscriptions`, `telegram_subscriptions`, `email_subscriptions` |
+| 0003 | `prediction_accuracy`, `neighborhood_stats` (+ duration columns on `predictions`) |
+| 0004 | `user_points`, `user_badges`, `point_transactions`, `community_notes`, `note_upvotes`, `neighbor_alert_log` |
+| 0005 | `utility_companies`, `business_profiles`, `webhook_subscriptions`, `webhook_events` |
+| 0006 | `fraud_flags` (+ `is_admin` on `users`, alert columns on `user_locations`) |
+| 0007 | `sms_inbound_log` |
+
+After running the SQL, the `alembic_version` table is set to `0007` so Alembic recognizes the DB as fully migrated.
 
 ---
 
-## 📲 SMS Gateway — Jasmin + SMPP
+## Environment Variables
 
-Instead of paying per-SMS to Twilio or Africa's Talking, this project runs its **own SMS infrastructure** using [Jasmin](https://docs.jasminsms.com/), an open-source Python SMS gateway that speaks SMPP — the protocol used by every telecom operator worldwide.
+Copy `.env.example` to `.env` and fill in:
+
+| Variable | Description | Required |
+|---|---|---|
+| `SECRET_KEY` | JWT signing secret (64+ random chars) | Yes |
+| `DATABASE_URL` | Async PostgreSQL URL (`postgresql+asyncpg://...`) | Yes |
+| `SYNC_DATABASE_URL` | Sync PostgreSQL URL for Alembic (`postgresql://...`) | Yes |
+| `REDIS_URL` | Redis connection string | Yes |
+| `OPENWEATHERMAP_API_KEY` | OWM API key (free tier, global) | Yes |
+| `GROQ_API_KEY` | Groq API key for AI explanations | Optional |
+| `VITE_MAPBOX_TOKEN` | Mapbox GL JS token | Yes (frontend) |
+| `JASMIN_HOST` | Jasmin container hostname | Yes (SMS) |
+| `SMPP_HOST` | Your SMPP aggregator endpoint | Yes (SMS) |
+| `SMPP_USERNAME` | SMPP username | Yes (SMS) |
+| `SMPP_PASSWORD` | SMPP password | Yes (SMS) |
+| `JASMIN_CONNECTOR_DEFAULT` | Default Jasmin connector ID | Yes (SMS) |
+| `SMTP_HOST` | SMTP server for email alerts | Optional |
+| `SMTP_PORT` | SMTP port (587 for TLS) | Optional |
+| `SMTP_USERNAME` | SMTP username / email address | Optional |
+| `SMTP_PASSWORD` | SMTP App Password (not account password) | Optional |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token from @BotFather | Optional |
+| `USSD_SHORT_CODE` | USSD short code digits | Optional |
+| `VAPID_PUBLIC_KEY` | Web Push VAPID public key | Optional |
+| `VAPID_PRIVATE_KEY` | Web Push VAPID private key | Optional |
+
+See [.env.example](.env.example) for the complete list with defaults.
+
+---
+
+## SMS Gateway — Jasmin + SMPP
+
+All SMS routing goes through [Jasmin](https://docs.jasminsms.com/), an open-source Python SMS gateway that speaks SMPP v3.4 — the protocol used by every telecom operator worldwide.
 
 ```
 Your App
-   ↓  POST /sms/send  { to, country, lang, template, vars }
-SMS Gateway API  (port 8001)
-   ↓  Routes via JASMIN_CONNECTOR_{CC} env var
-Jasmin Gateway  (port 8080)
-   ↓  SMPP v3.4 protocol  (operator-agnostic)
-Any SMPP aggregator worldwide  (Sinch, Infobip, Vonage, AT, direct operator…)
+   ↓  POST /send-sms  { phone, message }
+SMS Gateway API  (Jasmin wrapper)
+   ↓  Routes via JASMIN_CONNECTOR_DEFAULT env var
+Jasmin Gateway
+   ↓  SMPP v3.4 (operator-agnostic)
+Any SMPP aggregator worldwide  (Sinch, Infobip, Vonage, direct operator, ...)
    ↓
 User's Phone  (any country, any network)
 ```
+
+**No country-specific connectors in code.** Routing is 100% controlled by environment variables. To add a new country or operator: update SMPP credentials in `.env` — no code changes needed.
 
 ### Cost comparison
 
@@ -313,33 +317,23 @@ User's Phone  (any country, any network)
 |---|---|---|
 | Twilio | ~$0.05–0.08 | ~$6,500 |
 | Africa's Talking | ~$0.01–0.03 | ~$2,000 |
-| **Your own (SMPP direct)** | **~$0.003–0.008** | **~$500** |
-
-### Adding a new country/operator
-
-No code changes needed. Just set environment variables:
-
-1. Get SMPP credentials from your aggregator (Sinch, Infobip, Vonage, etc.) or directly from the local telecom
-2. Set `SMPP_HOST`, `SMPP_USERNAME`, `SMPP_PASSWORD` in `.env`
-3. Optionally set `JASMIN_CONNECTOR_{CC}` for per-country routing (e.g. `JASMIN_CONNECTOR_NG=ng_connector`)
-4. Configure the connector in Jasmin via CLI or `sms-gateway/jasmin/connectors.cfg`
-
-The single [`JasminConnector`](sms-gateway/connectors/jasmin.py) handles all countries.
+| **Own SMPP (via Jasmin)** | **~$0.003–0.008** | **~$500** |
 
 ---
 
-## 🤖 ML Engine
+## ML Engine
 
-### Prediction pipeline (runs every 4 hours via Celery)
+### Prediction pipeline (Celery, every 4 hours)
 
 ```
 1. FETCH      OpenWeatherMap forecast → next 24h per tracked H3 cell
 2. FEATURES   Weather + temporal + historical outage + grid type
-3. PREDICT    XGBoost  → P(outage in 4h)  [weight: 70%]
-              Prophet  → 7-day trend       [weight: 30%]
+3. PREDICT    XGBoost  → P(outage in 4h)   [weight: 70%]
+              Prophet  → 7-day trend        [weight: 30%]
               Ensemble → final probability
-4. STORE      PostgreSQL predictions table
-5. ALERT      Celery checks subscriptions → SMS + push if threshold crossed
+4. EXPLAIN    Groq LLM → human-readable summary in user's language
+5. STORE      PostgreSQL predictions table
+6. ALERT      Check subscriptions → SMS + push if threshold crossed
 ```
 
 ### Feature set
@@ -347,36 +341,45 @@ The single [`JasminConnector`](sms-gateway/connectors/jasmin.py) handles all cou
 | Category | Features |
 |---|---|
 | Weather | `rainfall_mm`, `temperature_c`, `wind_speed_ms`, `humidity_pct`, `is_storm`, `is_heavy_rain` |
-| Temporal | `hour`, `day_of_week`, `month`, `is_weekend`, `is_peak_hour`, `is_holiday` |
+| Temporal | `hour`, `day_of_week`, `month`, `is_weekend`, `is_peak_hour` |
 | Historical | `outages_last_7d`, `outages_last_30d`, `avg_duration_minutes`, `outage_frequency_per_week` |
-| Grid | `grid_type` (hydro/coal/gas/nuclear/mixed), `center_lat`, `center_lng` |
-
-### Train models for a region
-
-```bash
-cd ml-engine
-
-# Train all regions
-python training/train.py --region all
-
-# Train a specific region
-python training/train.py --region africa_east
-```
-
-Available regions: `africa_east`, `africa_west`, `europe_central`, `north_america_east`, `latin_america`, `asia_south`
+| Grid | `grid_type`, `center_lat`, `center_lng` |
 
 ### Risk levels
 
 | Level | Probability | Color |
 |---|---|---|
-| 🟢 Low | < 40% | Green |
-| 🟡 Medium | 40–64% | Amber |
-| 🔴 High | 65–84% | Red |
-| 🟣 Critical | ≥ 85% | Purple |
+| Low | < 40% | Green |
+| Medium | 40–64% | Amber |
+| High | 65–84% | Red |
+| Critical | >= 85% | Purple |
+
+### Train the model
+
+```bash
+cd ml-engine
+python training/train.py --region all
+```
 
 ---
 
-## 🌐 Supported Languages
+## AI Insights (Groq LLM)
+
+The `/api/v1/insights/` endpoints use the Groq API (`llama-3.1-8b-instant`) to generate plain-language explanations:
+
+```
+GET /api/v1/insights/prediction/{h3_index}?language=rw
+→ "Amashanyarazi azima mu gace kawe saa 18:00 (82%). Shaza ibikoresho byawe nonaha."
+
+GET /api/v1/insights/history/{h3_index}?language=en
+→ "This area had 12 outages in the past 30 days, averaging 2.4 hours each..."
+```
+
+If `GROQ_API_KEY` is not set, these endpoints return an empty explanation string without failing — predictions continue to work normally.
+
+---
+
+## Supported Languages
 
 | Code | Language | Primary Regions |
 |---|---|---|
@@ -388,86 +391,116 @@ Available regions: `africa_east`, `africa_west`, `europe_central`, `north_americ
 | `es` | Spanish | Latin America, Spain |
 | `pt` | Portuguese | Brazil, Angola, Mozambique |
 
-SMS messages are sent in the user's registered language. Kinyarwanda example:
-
-> *"IMBARAGA: Amashanyarazi azima mu gace kawe saa 18:00 (82%). Shaza ibikoresho byawe nonaha."*
+SMS messages and AI explanations are generated in the user's registered language.
 
 ---
 
-## 🗓️ Build Phases
+## API Reference
 
-### ✅ Phase 1 — Foundation (Weeks 1–3)
-- [x] PostgreSQL schema + PostGIS + H3 cell seeder
-- [x] FastAPI backend (users, outage reports, H3 lookup)
+Base URL: `http://localhost:8000/api/v1`
+
+Interactive docs: `http://localhost:8000/docs`
+
+### Core endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/auth/register` | No | Register new user |
+| `POST` | `/auth/login` | No | Get JWT token |
+| `GET` | `/auth/me` | Yes | Current user profile |
+| `GET` | `/predictions/` | Yes | List predictions by H3 cell |
+| `GET` | `/predictions/cell/{h3_index}` | Yes | Latest prediction for a cell |
+| `POST` | `/outages/report` | Yes | Report a power outage |
+| `GET` | `/outages/{h3_index}` | Yes | Outage history for a cell |
+| `POST` | `/alerts/subscribe` | Yes | Subscribe to alerts |
+| `GET` | `/alerts/my-subscriptions` | Yes | List my subscriptions |
+| `GET` | `/insights/prediction/{h3_index}` | Yes | AI explanation for prediction |
+| `GET` | `/insights/history/{h3_index}` | Yes | AI explanation for outage history |
+| `GET` | `/admin/stats` | Admin | Platform statistics |
+| `POST` | `/sms/inbound` | No | Inbound SMS webhook |
+| `POST` | `/ussd` | No | USSD session handler |
+
+---
+
+## CI/CD
+
+Tests run on every push via GitHub Actions (`.github/workflows/ci.yml`).
+
+The test suite uses **SQLite in-memory** (no external DB needed in CI) with monkey-patched JSONB and UUID support.
+
+### Current test status
+
+- Auth (register, login, me, unauthenticated): PASS
+- Predictions API (list, report outage): PASS
+- Outage reports: PASS
+- Weather service: PASS
+- Coverage threshold: >= 40%
+
+### Run tests locally
+
+```bash
+cd backend
+pip install -r requirements.txt
+pytest -v --cov=app --cov-report=term-missing
+```
+
+---
+
+## Build Phases
+
+### Phase 1 — Foundation (Complete)
+- [x] PostgreSQL schema + H3 cell seeder
+- [x] FastAPI backend (auth, users, outage reports, H3 lookup, predictions)
 - [x] OpenWeatherMap integration
-- [x] Jasmin SMS gateway Docker setup + SMPP connectors
-- [x] React PWA (home, report outage, basic map, dashboard)
-- [x] Celery tasks (weather fetch + rule-based prediction + alert dispatch)
+- [x] Jasmin SMS gateway + SMPP routing via env vars
+- [x] React PWA (home, report outage, map, dashboard)
+- [x] Celery tasks (weather fetch + prediction + alert dispatch)
 - [x] 7-language SMS templates
+- [x] Alembic migration chain (0001→0007)
+- [x] Supabase database bootstrap script
+- [x] CI/CD pipeline (GitHub Actions)
 
-### 🔄 Phase 2 — Intelligence (Weeks 4–6)
+### Phase 2 — Intelligence (In Progress)
+- [x] Groq LLM insights endpoint (7 languages)
+- [x] Admin dashboard + fraud detection
+- [x] USSD `*384#` fallback
+- [x] Two-way SMS interaction
+- [x] Community features (points, badges, notes)
+- [x] Enterprise API (webhooks, utility companies)
 - [ ] Train XGBoost + Prophet on collected data
-- [ ] Replace rule-based predictor with ML ensemble
 - [ ] Mapbox heatmap with H3 hexagon overlay
-- [ ] Alert subscription system + quiet hours
 - [ ] ENTSO-E / EIA grid load integration
 
-### 🔮 Phase 3 — Scale & Polish (Weeks 7–9)
+### Phase 3 — Scale & Polish
 - [ ] PWA Service Worker + full offline mode
-- [ ] USSD fallback for feature phones
-- [ ] Web Push notifications (Firebase FCM)
+- [ ] Web Push notifications
 - [ ] Public REST API for utilities and governments
-- [ ] Stripe billing (Free / Pro / Business / Enterprise tiers)
 - [ ] White-label for utility companies
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Pull requests are welcome. For major changes, open an issue first to discuss what you would like to change.
+Pull requests are welcome. For major changes, open an issue first.
 
 ```bash
-# Fork → clone → branch
 git checkout -b feature/your-feature-name
-
-# Make changes, then
+# make changes
 git commit -m "feat: describe your change"
 git push origin feature/your-feature-name
-# Open a PR
+# open a PR
 ```
 
 ---
 
-## 📄 License
+## License
 
-```
-MIT License
-
-Copyright (c) 2026 AI Power Blackout Predictor Contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+MIT License — Copyright (c) 2026 AI Power Blackout Predictor Contributors
 
 ---
 
 <div align="center">
 
-Built with ⚡ for the world — from Osee to everywhere.
+Built for the world — from Osee to everywhere.
 
 </div>
