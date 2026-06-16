@@ -46,22 +46,22 @@ async def test_parse_forecast_missing_rain():
 
 @pytest.mark.asyncio
 async def test_fetch_forecast_calls_owm():
+    from unittest.mock import MagicMock
     from app.services.weather_service import fetch_forecast
 
-    mock_response = AsyncMock()
+    mock_response = MagicMock()
     mock_response.json.return_value = {"list": []}
-    mock_response.raise_for_status = AsyncMock()
 
-    with patch("httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client_cls.return_value = mock_client
+    mock_http_client = AsyncMock()
+    mock_http_client.get = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient") as mock_cls:
+        mock_cls.return_value.__aenter__ = AsyncMock(return_value=mock_http_client)
+        mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
         result = await fetch_forecast(lat=-1.95, lng=30.06)
-        assert result == {"list": []}
-        mock_client.get.assert_called_once()
-        call_kwargs = mock_client.get.call_args
-        assert "lat" in call_kwargs.kwargs.get("params", {}) or \
-               "lat" in (call_kwargs.args[1] if len(call_kwargs.args) > 1 else {})
+
+    assert result == {"list": []}
+    mock_http_client.get.assert_called_once()
+    params = mock_http_client.get.call_args.kwargs.get("params", {})
+    assert "lat" in params
