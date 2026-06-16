@@ -1,8 +1,0 @@
-{
-  "prediction": { "window": "Kipindi cha Utabiri" },
-  "home": { "title": "Kibashiri cha Umeme", "subtitle": "Tahadhari za AI kwa kukatiwa umeme" },
-  "report": { "title": "Ripoti Kukatiwa Umeme", "submit": "Ripoti Sasa", "submitting": "Inatuma...", "thanks": "Asante!" },
-  "map": { "title": "Ramani ya Dunia" },
-  "alerts": { "title": "Mipangilio ya Tahadhari", "add": "Ongeza Tahadhari" },
-  "risk": { "low": "CHINI", "medium": "WASTANI", "high": "JUU", "critical": "HATARI" }
-}

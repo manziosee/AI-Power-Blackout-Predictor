@@ -1,8 +1,0 @@
-{
-  "prediction": { "window": "Igihe cy'Iteganyabikorwa" },
-  "home": { "title": "Umenyesha w'Amashanyarazi", "subtitle": "Imenyesha y'AI yo gucikamo amashanyarazi" },
-  "report": { "title": "Tangaza Gucikamo", "submit": "Tangaza Nonaha", "submitting": "Kohereza...", "thanks": "Murakoze!" },
-  "map": { "title": "Ikarita y'Isi" },
-  "alerts": { "title": "Igenamiterere ry'Imenyesha", "add": "Ongeraho Umenyesha" },
-  "risk": { "low": "GIKE", "medium": "HAGATI", "high": "HEJURU", "critical": "AKAGA" }
-}

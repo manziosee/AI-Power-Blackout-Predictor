@@ -1,8 +1,0 @@
-{
-  "prediction": { "window": "Janela de Previsão" },
-  "home": { "title": "Preditor de Apagões", "subtitle": "Alertas de IA para falta de energia" },
-  "report": { "title": "Reportar Apagão", "submit": "Reportar Agora", "submitting": "Enviando...", "thanks": "Obrigado!" },
-  "map": { "title": "Mapa Global" },
-  "alerts": { "title": "Configurações de Alerta", "add": "Adicionar Alerta" },
-  "risk": { "low": "BAIXO", "medium": "MÉDIO", "high": "ALTO", "critical": "CRÍTICO" }
-}

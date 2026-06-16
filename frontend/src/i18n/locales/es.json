@@ -1,8 +1,0 @@
-{
-  "prediction": { "window": "Ventana de Predicción" },
-  "home": { "title": "Predictor de Apagones", "subtitle": "Alertas IA para cortes de luz" },
-  "report": { "title": "Reportar Apagón", "submit": "Reportar Ahora", "submitting": "Enviando...", "thanks": "¡Gracias!" },
-  "map": { "title": "Mapa Global" },
-  "alerts": { "title": "Configuración de Alertas", "add": "Agregar Alerta" },
-  "risk": { "low": "BAJO", "medium": "MEDIO", "high": "ALTO", "critical": "CRÍTICO" }
-}

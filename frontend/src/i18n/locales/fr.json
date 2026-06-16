@@ -1,8 +1,0 @@
-{
-  "prediction": { "window": "Fenêtre de prédiction" },
-  "home": { "title": "Prédicteur de coupures", "subtitle": "Alertes IA pour coupures d'électricité" },
-  "report": { "title": "Signaler une coupure", "submit": "Signaler maintenant", "submitting": "Envoi...", "thanks": "Merci !" },
-  "map": { "title": "Carte mondiale" },
-  "alerts": { "title": "Paramètres d'alerte", "add": "Ajouter une alerte" },
-  "risk": { "low": "FAIBLE", "medium": "MOYEN", "high": "ÉLEVÉ", "critical": "CRITIQUE" }
-}

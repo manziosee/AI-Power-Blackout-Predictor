@@ -179,20 +179,6 @@ services:
     volumes:
       - ./data-pipeline:/app
 
-  # ── Frontend ─────────────────────────────────────────────────────────────────
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: blackout_frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      VITE_API_BASE_URL: http://localhost:8000/api/v1
-
   # ── Nginx Reverse Proxy ───────────────────────────────────────────────────────
   nginx:
     image: nginx:alpine
@@ -203,7 +189,6 @@ services:
       - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - backend
-      - frontend
       - sms-gateway
 
 volumes:
