@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend lint + test ────────────────────────────────────────────────────
+  backend:
+    name: Backend — lint & test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: blackout_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with ruff
+        run: |
+          pip install ruff
+          ruff check app/ --select E,F,W --ignore E501
+
+      - name: Run tests
+        env:
+          DATABASE_URL: "sqlite+aiosqlite:///./test.db"
+          SYNC_DATABASE_URL: "sqlite:///./test.db"
+          REDIS_URL: "redis://localhost:6379/15"
+          SECRET_KEY: "ci-test-secret-key"
+          OPENWEATHERMAP_API_KEY: "ci-test-key"
+          SMS_GATEWAY_API_KEY: "ci-test-sms-key"
+          SMS_GATEWAY_URL: "http://localhost:8001"
+          ML_ENGINE_URL: "http://localhost:8002"
+        run: |
+          pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=40
+
+  # ── SMS Gateway lint ───────────────────────────────────────────────────────
+  sms-gateway:
+    name: SMS Gateway — lint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: sms-gateway
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: sms-gateway/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with ruff
+        run: |
+          pip install ruff
+          ruff check api/ connectors/ --select E,F,W --ignore E501
+
+  # ── ML Engine lint ─────────────────────────────────────────────────────────
+  ml-engine:
+    name: ML Engine — lint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ml-engine
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ml-engine/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with ruff
+        run: |
+          pip install ruff
+          ruff check . --select E,F,W --ignore E501
+
+  # ── Docker build check ─────────────────────────────────────────────────────
+  docker:
+    name: Docker — build check
+    runs-on: ubuntu-latest
+    needs: [backend, sms-gateway, ml-engine]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t blackout-backend:ci ./backend
+
+      - name: Build sms-gateway image
+        run: docker build -t blackout-sms:ci ./sms-gateway
+
+      - name: Build ml-engine image
+        run: docker build -t blackout-ml:ci ./ml-engine
+
+      - name: Build data-pipeline image
+        run: docker build -t blackout-pipeline:ci ./data-pipeline
