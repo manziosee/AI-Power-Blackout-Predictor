@@ -45,16 +45,24 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = ""
 
     # App public URL (used in email links)
-    APP_URL: str = "http://localhost:5173"
+    APP_URL: str = "http://localhost:8000"
 
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
 
     # USSD (Africa's Talking or compatible aggregator)
-    USSD_SHORT_CODE: str = "384"          # the *384# short code digits
-    USSD_AT_SECRET: str = ""              # AT HMAC secret; leave blank to skip verification
+    USSD_SHORT_CODE: str = "384"
+    USSD_AT_SECRET: str = ""
 
     # ML Engine
     ML_ENGINE_URL: str = "http://ml-engine:8002"
+
+    # Groq AI (free LLM inference — llama3, mixtral)
+    GROQ_API_KEY: str = ""
+
+    # Africa's Talking HTTP SMS API (no SMPP required)
+    AFRICASTALKING_API_KEY: str = ""
+    AFRICASTALKING_USERNAME: str = "sandbox"
+    AFRICASTALKING_SENDER_ID: str = "BLACKOUT"
 
     class Config:
         env_file = ".env"

@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     business,
     community,
     email_alerts,
+    insights,
     neighborhoods,
     outages,
     predictions,
@@ -41,3 +42,4 @@ api_router.include_router(business.router)
 api_router.include_router(webhooks.router)
 api_router.include_router(ussd.router)
 api_router.include_router(sms_inbound.router)
+api_router.include_router(insights.router)

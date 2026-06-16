@@ -12,6 +12,20 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+# ── SQLite compat: teach it to render JSONB and UUID as plain JSON / VARCHAR ──
+from sqlalchemy import JSON, String
+from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
+
+def _visit_JSONB(self, type_, **kw):
+    return self.visit_JSON(type_, **kw)
+
+def _visit_UUID(self, type_, **kw):
+    return self.visit_VARCHAR(String(36), **kw)
+
+SQLiteTypeCompiler.visit_JSONB = _visit_JSONB
+SQLiteTypeCompiler.visit_UUID = _visit_UUID
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Point config at SQLite before importing the app
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
