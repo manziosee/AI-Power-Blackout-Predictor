@@ -14,7 +14,6 @@ from app.models.user import User
 from app.services.grid_topology_service import (
     get_affected_cells,
     get_transformers_for_cell,
-    propagate_risk_from_failure,
 )
 
 router = APIRouter()

@@ -2,14 +2,13 @@
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_admin
+from app.api.deps import require_admin
 from app.core.database import get_db
-from app.models.enterprise import UtilityCompany
 from app.models.user import User
 from app.models.white_label import WhiteLabelConfig
 from app.services.white_label_service import get_brand_for_utility

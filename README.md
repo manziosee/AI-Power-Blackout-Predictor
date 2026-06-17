@@ -420,6 +420,36 @@ Interactive docs: `http://localhost:8000/docs`
 | `POST` | `/sms/inbound` | No | Inbound SMS webhook |
 | `POST` | `/ussd` | No | USSD session handler |
 
+### New feature endpoints (migration 0008–0021)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/planned-outages/` | No | Upcoming planned outages for a cell |
+| `POST` | `/planned-outages/` | Admin | Create a planned outage entry |
+| `POST` | `/feedback/respond` | No | Record YES/NO response to feedback SMS |
+| `GET` | `/feedback/accuracy/{h3_index}` | Yes | Prediction accuracy from user feedback |
+| `POST` | `/medical-priority/register` | Yes | Self-register as medical priority user |
+| `GET` | `/medical-priority/heatmap` | Admin | Count of priority users per cell |
+| `GET` | `/resilience/{h3_index}` | Yes | Neighborhood resilience score (0–100) |
+| `GET` | `/resilience/top` | No | Top 20 most resilient cells |
+| `POST` | `/insurance/policies` | Yes | Create parametric insurance policy |
+| `GET` | `/insurance/claims` | Yes | List own insurance claims |
+| `POST` | `/data-marketplace/request` | No | Submit anonymized data export request |
+| `GET` | `/data-marketplace/preview/{h3_index}` | No | Free aggregated data preview |
+| `POST` | `/white-label/` | Admin | Create white-label config for a utility |
+| `GET` | `/white-label/brand/{api_key}` | No | Get public branding for embed |
+| `POST` | `/ivr/trigger` | Admin | Trigger IVR voice calls for a cell |
+| `GET` | `/poi/` | No | List ATM/fuel stations in a cell |
+| `POST` | `/poi/{id}/report` | Yes | Report POI operational status |
+| `POST` | `/prepaid/meters` | Yes | Register prepaid electricity meter |
+| `GET` | `/grid/transformers` | Admin | List grid transformers |
+| `GET` | `/seasonal/{h3_index}` | Yes | 24-month seasonal outage breakdown |
+| `GET` | `/seasonal/{h3_index}/worst-months` | Yes | Top 3 worst months historically |
+| `GET` | `/transfer-learning/similar/{region}` | Admin | Similar regions for model bootstrap |
+| `GET` | `/regulatory/reports` | Admin | Regulatory compliance reports |
+| `POST` | `/regulatory/reports/generate` | Admin | Generate monthly compliance report |
+| `GET` | `/dispatch/recommend` | Admin | Crew pre-positioning recommendations |
+
 ---
 
 ## CI/CD
@@ -451,31 +481,48 @@ pytest -v --cov=app --cov-report=term-missing
 ### Phase 1 — Foundation (Complete)
 - [x] PostgreSQL schema + H3 cell seeder
 - [x] FastAPI backend (auth, users, outage reports, H3 lookup, predictions)
-- [x] OpenWeatherMap integration
-- [x] Jasmin SMS gateway + SMPP routing via env vars
+- [x] OpenWeatherMap weather integration
+- [x] Jasmin SMS gateway + SMPP routing via env vars (no vendor lock-in)
 - [x] React PWA (home, report outage, map, dashboard)
 - [x] Celery tasks (weather fetch + prediction + alert dispatch)
-- [x] 7-language SMS templates
+- [x] 7-language SMS templates (en/fr/sw/rw/ar/es/pt)
 - [x] Alembic migration chain (0001→0007)
-- [x] Supabase database bootstrap script
-- [x] CI/CD pipeline (GitHub Actions)
+- [x] Supabase database bootstrap script (`bootstrap_supabase.sql`)
+- [x] CI/CD pipeline (GitHub Actions, SQLite in-memory, coverage ≥ 40%)
 
-### Phase 2 — Intelligence (In Progress)
-- [x] Groq LLM insights endpoint (7 languages)
+### Phase 2 — Intelligence (Complete)
+- [x] Groq LLM insights endpoint — plain-language risk summaries in 7 languages
 - [x] Admin dashboard + fraud detection
-- [x] USSD `*384#` fallback
-- [x] Two-way SMS interaction
-- [x] Community features (points, badges, notes)
-- [x] Enterprise API (webhooks, utility companies)
-- [ ] Train XGBoost + Prophet on collected data
-- [ ] Mapbox heatmap with H3 hexagon overlay
-- [ ] ENTSO-E / EIA grid load integration
+- [x] USSD `*384#` fallback — works on any feature phone
+- [x] Two-way SMS interaction (STATUS / REPORT / STOP / JOIN keywords)
+- [x] Community features (points, badges, streaks, leaderboard, notes)
+- [x] Enterprise API (webhooks, utility company portal)
+- [x] **Planned outage calendar** — merge utility maintenance windows with predictions
+- [x] **Feedback loop** — follow-up SMS 4h after alert ("Did power go out?") feeds ML
+- [x] **Medical priority registry** — dialysis/oxygen users get 6h early alerts
+- [x] **Neighborhood resilience score** — 0–100 grade per H3 cell (A–F)
+- [x] **Parametric insurance** — auto-trigger claims when outage exceeds threshold
+- [x] **Data marketplace** — anonymized outage data for researchers and insurers
+- [x] **White-label** — utilities get branded SMS sender ID and custom portal
+- [x] **IVR voice calls** — 7-language TTS calls for users without SMS
+- [x] **ATM / fuel station status** — crowdsourced operational status layer
+- [x] **Prepaid meter integration** — low-balance alerts before predicted outages
+- [x] **Grid topology model** — transformer→cell mapping for cascading risk
+- [x] **Seasonal dashboard** — 24-month outage decomposition per cell
+- [x] **Transfer learning** — new regions borrow from similar-climate regions
+- [x] **Regulatory reporting** — monthly compliance reports per district
+- [x] **Crew dispatch optimizer** — pre-position maintenance crews before high-risk windows
+- [x] Migration chain extended to 0001→0021 (21 migrations, 30+ tables)
 
 ### Phase 3 — Scale & Polish
-- [ ] PWA Service Worker + full offline mode
-- [ ] Web Push notifications
-- [ ] Public REST API for utilities and governments
-- [ ] White-label for utility companies
+- [ ] Train XGBoost + Prophet on collected data
+- [ ] Mapbox heatmap with H3 hexagon overlay
+- [ ] PWA Service Worker + full offline mode (IndexedDB sync)
+- [ ] ENTSO-E / EIA grid load integration (Europe + US grid data)
+- [ ] Web Push notifications (VAPID)
+- [ ] Stripe billing (Free / Pro / Business / Enterprise tiers)
+- [ ] Public REST API for governments and NGOs
+- [ ] GNN graph model for transformer-level cascade prediction
 
 ---
 

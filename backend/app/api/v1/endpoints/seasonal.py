@@ -7,7 +7,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.seasonal import SeasonalStats
 from app.models.user import User
-from app.services.seasonal_service import compute_stats_for_cell, get_worst_months, get_year_over_year
+from app.services.seasonal_service import get_worst_months, get_year_over_year
 
 router = APIRouter()
 

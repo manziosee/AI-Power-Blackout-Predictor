@@ -1,5 +1,4 @@
 """Service for IVR phone call alerts."""
-import uuid
 from datetime import datetime
 
 from sqlalchemy import select
@@ -32,8 +31,6 @@ async def queue_calls_for_cell(
     db: AsyncSession,
 ) -> list[IvrCall]:
     """Create IvrCall rows for all users in the cell."""
-    from app.models.user import User
-
     loc_result = await db.execute(
         select(UserLocation).where(UserLocation.h3_index == h3_index, UserLocation.is_active)
     )

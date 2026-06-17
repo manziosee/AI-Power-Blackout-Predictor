@@ -1,6 +1,5 @@
 """IVR Phone Call Alert endpoints."""
 import uuid
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel

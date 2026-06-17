@@ -70,9 +70,6 @@ async def check_and_send_balance_alerts(db: AsyncSession) -> int:
         if not user:
             continue
 
-        lang = user.language or "en"
-        msg = get_alert_message(lang, meter.last_balance_kwh, meter.provider or "provider", hours_until)
-
         reminder = PrepaidTopupReminder(
             user_id=meter.user_id,
             meter_id=meter.id,
