@@ -6,19 +6,34 @@ from app.api.v1.endpoints import (
     analytics,
     business,
     community,
+    data_marketplace,
+    dispatch,
     email_alerts,
+    feedback,
+    grid_topology,
     insights,
+    insurance,
+    ivr,
+    medical_priority,
     neighborhoods,
     outages,
+    planned_outages,
+    poi,
     predictions,
+    prepaid,
     push,
+    regulatory,
     reports,
+    resilience,
+    seasonal,
     sms_inbound,
     telegram,
+    transfer_learning,
     users,
     ussd,
     utility,
     webhooks,
+    white_label,
     whatsapp,
 )
 
@@ -43,3 +58,18 @@ api_router.include_router(webhooks.router)
 api_router.include_router(ussd.router)
 api_router.include_router(sms_inbound.router)
 api_router.include_router(insights.router)
+api_router.include_router(planned_outages.router, prefix="/planned-outages", tags=["Planned Outages"])
+api_router.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
+api_router.include_router(medical_priority.router, prefix="/medical-priority", tags=["Medical Priority"])
+api_router.include_router(resilience.router, prefix="/resilience", tags=["Resilience"])
+api_router.include_router(insurance.router, prefix="/insurance", tags=["Insurance"])
+api_router.include_router(data_marketplace.router, prefix="/data-marketplace", tags=["Data Marketplace"])
+api_router.include_router(white_label.router, prefix="/white-label", tags=["White Label"])
+api_router.include_router(ivr.router, prefix="/ivr", tags=["IVR"])
+api_router.include_router(poi.router, prefix="/poi", tags=["POI"])
+api_router.include_router(prepaid.router, prefix="/prepaid", tags=["Prepaid"])
+api_router.include_router(grid_topology.router, prefix="/grid", tags=["Grid Topology"])
+api_router.include_router(seasonal.router, prefix="/seasonal", tags=["Seasonal"])
+api_router.include_router(transfer_learning.router, prefix="/transfer-learning", tags=["Transfer Learning"])
+api_router.include_router(regulatory.router, prefix="/regulatory", tags=["Regulatory"])
+api_router.include_router(dispatch.router, prefix="/dispatch", tags=["Dispatch"])

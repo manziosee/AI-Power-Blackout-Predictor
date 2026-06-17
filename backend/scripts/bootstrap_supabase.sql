@@ -385,9 +385,337 @@ CREATE INDEX IF NOT EXISTS ix_sms_inbound_log_phone    ON sms_inbound_log(phone)
 CREATE INDEX IF NOT EXISTS ix_sms_inbound_log_received ON sms_inbound_log(received_at);
 
 -- ════════════════════════════════════════════════════════════
---  Mark alembic as fully migrated to revision 0007
+--  0008 — planned outages
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS planned_outages (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    h3_index    VARCHAR(15) NOT NULL,
+    utility_id  UUID        REFERENCES utility_companies(id) ON DELETE SET NULL,
+    title       VARCHAR(200) NOT NULL,
+    description TEXT,
+    starts_at   TIMESTAMPTZ NOT NULL,
+    ends_at     TIMESTAMPTZ NOT NULL,
+    source      VARCHAR(20) DEFAULT 'manual',
+    external_id VARCHAR(100) UNIQUE,
+    status      VARCHAR(20) DEFAULT 'scheduled',
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_planned_outages_h3 ON planned_outages(h3_index);
+
+-- ════════════════════════════════════════════════════════════
+--  0009 — prediction feedback
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS prediction_feedback (
+    id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    prediction_id         UUID        REFERENCES predictions(id) ON DELETE SET NULL,
+    user_id               UUID        REFERENCES users(id) ON DELETE SET NULL,
+    h3_index              VARCHAR(15) NOT NULL,
+    outage_occurred       BOOLEAN,
+    sms_sent_at           TIMESTAMPTZ,
+    response_received_at  TIMESTAMPTZ,
+    created_at            TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_prediction_feedback_h3 ON prediction_feedback(h3_index);
+
+-- ════════════════════════════════════════════════════════════
+--  0010 — medical priority users
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS medical_priority_users (
+    id                 UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id            UUID        NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    condition          VARCHAR(50) NOT NULL,
+    contact_phone      VARCHAR(20),
+    alert_hours_before INTEGER     DEFAULT 6,
+    notes              TEXT,
+    is_verified        BOOLEAN     DEFAULT FALSE,
+    created_at         TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ════════════════════════════════════════════════════════════
+--  0011 — resilience scores
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS resilience_scores (
+    id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    h3_index                    VARCHAR(15) NOT NULL UNIQUE,
+    score                       FLOAT       NOT NULL,
+    outage_frequency_score      FLOAT,
+    avg_duration_score          FLOAT,
+    prediction_accuracy_score   FLOAT,
+    report_participation_score  FLOAT,
+    outages_30d                 INTEGER     DEFAULT 0,
+    avg_duration_minutes        FLOAT,
+    grade                       VARCHAR(2),
+    computed_at                 TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ════════════════════════════════════════════════════════════
+--  0012 — insurance policies + claims
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS insurance_policies (
+    id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id               UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    h3_index              VARCHAR(15) NOT NULL,
+    premium_usd_monthly   FLOAT       NOT NULL,
+    payout_usd_per_hour   FLOAT       NOT NULL,
+    min_duration_hours    FLOAT       DEFAULT 2.0,
+    max_payout_usd        FLOAT       NOT NULL,
+    insurer               VARCHAR(50) DEFAULT 'platform',
+    is_active             BOOLEAN     DEFAULT TRUE,
+    start_date            TIMESTAMPTZ NOT NULL,
+    end_date              TIMESTAMPTZ,
+    created_at            TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_insurance_policies_h3 ON insurance_policies(h3_index);
+
+CREATE TABLE IF NOT EXISTS insurance_claims (
+    id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    policy_id     UUID        NOT NULL REFERENCES insurance_policies(id) ON DELETE CASCADE,
+    h3_index      VARCHAR(15) NOT NULL,
+    outage_start  TIMESTAMPTZ NOT NULL,
+    outage_end    TIMESTAMPTZ,
+    duration_hours FLOAT,
+    payout_usd    FLOAT,
+    status        VARCHAR(20) DEFAULT 'pending',
+    triggered_at  TIMESTAMPTZ DEFAULT NOW(),
+    paid_at       TIMESTAMPTZ,
+    payment_ref   VARCHAR(100),
+    notes         TEXT
+);
+
+-- ════════════════════════════════════════════════════════════
+--  0013 — data export requests
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS data_export_requests (
+    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    requester_email VARCHAR(255) NOT NULL,
+    requester_org   VARCHAR(200),
+    data_type       VARCHAR(50)  NOT NULL,
+    h3_cells        JSONB,
+    date_from       TIMESTAMPTZ  NOT NULL,
+    date_to         TIMESTAMPTZ  NOT NULL,
+    format          VARCHAR(10)  DEFAULT 'json',
+    status          VARCHAR(20)  DEFAULT 'pending',
+    price_usd       FLOAT        DEFAULT 0.0,
+    paid            BOOLEAN      DEFAULT FALSE,
+    record_count    INTEGER,
+    file_url        TEXT,
+    created_at      TIMESTAMPTZ  DEFAULT NOW(),
+    expires_at      TIMESTAMPTZ
+);
+
+-- ════════════════════════════════════════════════════════════
+--  0014 — white label configs
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS white_label_configs (
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    utility_id          UUID         NOT NULL UNIQUE REFERENCES utility_companies(id) ON DELETE CASCADE,
+    brand_name          VARCHAR(200) NOT NULL,
+    logo_url            TEXT,
+    primary_color       VARCHAR(7)   DEFAULT '#2563EB',
+    secondary_color     VARCHAR(7)   DEFAULT '#1E40AF',
+    sms_sender_id       VARCHAR(11),
+    email_from_name     VARCHAR(100),
+    email_from_address  VARCHAR(255),
+    custom_domain       VARCHAR(255),
+    support_phone       VARCHAR(20),
+    support_email       VARCHAR(255),
+    is_active           BOOLEAN      DEFAULT TRUE,
+    created_at          TIMESTAMPTZ  DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  DEFAULT NOW()
+);
+
+-- ════════════════════════════════════════════════════════════
+--  0015 — IVR calls
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS ivr_calls (
+    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID        REFERENCES users(id) ON DELETE SET NULL,
+    phone            VARCHAR(20) NOT NULL,
+    h3_index         VARCHAR(15) NOT NULL,
+    language         VARCHAR(5)  DEFAULT 'en',
+    risk_level       VARCHAR(10) NOT NULL,
+    probability      FLOAT       NOT NULL,
+    call_status      VARCHAR(20) DEFAULT 'queued',
+    call_sid         VARCHAR(100),
+    duration_seconds INTEGER,
+    attempted_at     TIMESTAMPTZ DEFAULT NOW(),
+    completed_at     TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS ix_ivr_calls_phone ON ivr_calls(phone);
+
+-- ════════════════════════════════════════════════════════════
+--  0016 — POI locations + status reports
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS poi_locations (
+    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    poi_type         VARCHAR(30) NOT NULL,
+    name             VARCHAR(200) NOT NULL,
+    address          TEXT,
+    h3_index         VARCHAR(15) NOT NULL,
+    lat              NUMERIC(10,7),
+    lng              NUMERIC(10,7),
+    is_operational   BOOLEAN     DEFAULT TRUE,
+    reports_up       INTEGER     DEFAULT 0,
+    reports_down     INTEGER     DEFAULT 0,
+    last_reported_at TIMESTAMPTZ,
+    created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_poi_locations_poi_type ON poi_locations(poi_type);
+CREATE INDEX IF NOT EXISTS ix_poi_locations_h3       ON poi_locations(h3_index);
+
+CREATE TABLE IF NOT EXISTS poi_status_reports (
+    id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    poi_id         UUID        NOT NULL REFERENCES poi_locations(id) ON DELETE CASCADE,
+    user_id        UUID        REFERENCES users(id) ON DELETE SET NULL,
+    is_operational BOOLEAN     NOT NULL,
+    notes          VARCHAR(280),
+    reported_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ════════════════════════════════════════════════════════════
+--  0017 — prepaid meters + topup reminders
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS prepaid_meters (
+    id                       UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                  UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    meter_number             VARCHAR(50) NOT NULL,
+    provider                 VARCHAR(100),
+    h3_index                 VARCHAR(15) NOT NULL,
+    last_balance_kwh         FLOAT,
+    low_balance_threshold_kwh FLOAT      DEFAULT 10.0,
+    alert_before_hours       INTEGER     DEFAULT 12,
+    last_synced_at           TIMESTAMPTZ,
+    is_active                BOOLEAN     DEFAULT TRUE,
+    created_at               TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_prepaid_meter_user_number UNIQUE (user_id, meter_number)
+);
+CREATE INDEX IF NOT EXISTS ix_prepaid_meters_user_id ON prepaid_meters(user_id);
+
+CREATE TABLE IF NOT EXISTS prepaid_topup_reminders (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID        REFERENCES users(id) ON DELETE SET NULL,
+    meter_id        UUID        NOT NULL REFERENCES prepaid_meters(id) ON DELETE CASCADE,
+    prediction_id   UUID,
+    message_sent_at TIMESTAMPTZ DEFAULT NOW(),
+    balance_at_send FLOAT,
+    topup_detected  BOOLEAN     DEFAULT FALSE
+);
+
+-- ════════════════════════════════════════════════════════════
+--  0018 — grid transformers + cell coverage
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS grid_transformers (
+    id                   UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                 VARCHAR(200) NOT NULL,
+    transformer_type     VARCHAR(30)  DEFAULT 'distribution',
+    lat                  NUMERIC(10,7),
+    lng                  NUMERIC(10,7),
+    h3_index             VARCHAR(15),
+    capacity_kva         FLOAT,
+    age_years            INTEGER,
+    utility_id           UUID         REFERENCES utility_companies(id) ON DELETE SET NULL,
+    status               VARCHAR(20)  DEFAULT 'active',
+    last_maintenance_at  TIMESTAMPTZ,
+    created_at           TIMESTAMPTZ  DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_grid_transformers_h3 ON grid_transformers(h3_index);
+
+CREATE TABLE IF NOT EXISTS transformer_cell_coverage (
+    id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    transformer_id UUID        NOT NULL REFERENCES grid_transformers(id) ON DELETE CASCADE,
+    h3_index       VARCHAR(15) NOT NULL,
+    is_primary     BOOLEAN     DEFAULT TRUE,
+    CONSTRAINT uq_transformer_cell UNIQUE (transformer_id, h3_index)
+);
+CREATE INDEX IF NOT EXISTS ix_transformer_cell_h3 ON transformer_cell_coverage(h3_index);
+
+-- ════════════════════════════════════════════════════════════
+--  0019 — seasonal stats
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS seasonal_stats (
+    id                   UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+    h3_index             VARCHAR(15) NOT NULL,
+    month                INTEGER     NOT NULL,
+    year                 INTEGER     NOT NULL,
+    outage_count         INTEGER     DEFAULT 0,
+    avg_duration_minutes FLOAT,
+    total_outage_hours   FLOAT,
+    computed_at          TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_seasonal_h3_month_year UNIQUE (h3_index, month, year)
+);
+CREATE INDEX IF NOT EXISTS ix_seasonal_stats_h3 ON seasonal_stats(h3_index);
+
+-- ════════════════════════════════════════════════════════════
+--  0020 — region similarities
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS region_similarities (
+    id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_region        VARCHAR(100) NOT NULL,
+    target_region        VARCHAR(100) NOT NULL,
+    similarity_score     FLOAT       NOT NULL,
+    basis                VARCHAR(50) DEFAULT 'climate',
+    climate_score        FLOAT,
+    infrastructure_score FLOAT,
+    computed_at          TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_region_similarity UNIQUE (source_region, target_region)
+);
+CREATE INDEX IF NOT EXISTS ix_region_similarities_source ON region_similarities(source_region);
+CREATE INDEX IF NOT EXISTS ix_region_similarities_target ON region_similarities(target_region);
+
+-- ════════════════════════════════════════════════════════════
+--  0021 — regulatory reports + dispatch recommendations
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS regulatory_reports (
+    id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    country_code         VARCHAR(5)  NOT NULL,
+    district             VARCHAR(100),
+    report_year          INTEGER     NOT NULL,
+    report_month         INTEGER     NOT NULL,
+    total_outages        INTEGER     DEFAULT 0,
+    total_outage_hours   FLOAT,
+    uptime_pct           FLOAT,
+    affected_cells_count INTEGER     DEFAULT 0,
+    worst_cell_h3        VARCHAR(15),
+    avg_repair_minutes   FLOAT,
+    report_data          JSONB,
+    generated_at         TIMESTAMPTZ DEFAULT NOW(),
+    report_url           TEXT,
+    CONSTRAINT uq_regulatory_report UNIQUE (country_code, district, report_year, report_month)
+);
+CREATE INDEX IF NOT EXISTS ix_regulatory_reports_country ON regulatory_reports(country_code);
+
+CREATE TABLE IF NOT EXISTS dispatch_recommendations (
+    id                    UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+    utility_id            UUID    REFERENCES utility_companies(id) ON DELETE SET NULL,
+    generated_at          TIMESTAMPTZ DEFAULT NOW(),
+    valid_until           TIMESTAMPTZ NOT NULL,
+    high_risk_cells       JSONB   NOT NULL,
+    recommended_positions JSONB,
+    crew_count            INTEGER DEFAULT 1,
+    total_priority_score  FLOAT,
+    is_acknowledged       BOOLEAN DEFAULT FALSE,
+    acknowledged_by       UUID,
+    acknowledged_at       TIMESTAMPTZ
+);
+
+-- ════════════════════════════════════════════════════════════
+--  Mark alembic as fully migrated to revision 0021
 -- ════════════════════════════════════════════════════════════
 
 INSERT INTO alembic_version (version_num)
-VALUES ('0007')
+VALUES ('0021')
 ON CONFLICT DO NOTHING;

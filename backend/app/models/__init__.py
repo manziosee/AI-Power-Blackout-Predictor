@@ -27,8 +27,36 @@ __all__ = [
     "UtilityCompany", "BusinessProfile", "WebhookSubscription", "WebhookEvent",
     "FraudFlag",
     "SmsInboundLog",
+    "PlannedOutage",
+    "PredictionFeedback",
+    "MedicalPriorityUser",
+    "ResilienceScore",
+    "InsurancePolicy", "InsuranceClaim",
+    "DataExportRequest",
+    "WhiteLabelConfig",
+    "IvrCall",
+    "PoiLocation", "PoiStatusReport",
+    "PrepaidMeter", "PrepaidTopupReminder",
+    "GridTransformer", "TransformerCellCoverage",
+    "SeasonalStats",
+    "RegionSimilarity",
+    "RegulatoryReport", "DispatchRecommendation",
 ]
 
 from app.models.enterprise import UtilityCompany, BusinessProfile, WebhookSubscription, WebhookEvent
 from app.models.fraud import FraudFlag
 from app.models.accessibility import SmsInboundLog
+from app.models.planned_outage import PlannedOutage
+from app.models.prediction_feedback import PredictionFeedback
+from app.models.medical_priority import MedicalPriorityUser
+from app.models.resilience import ResilienceScore
+from app.models.insurance import InsurancePolicy, InsuranceClaim
+from app.models.data_marketplace import DataExportRequest
+from app.models.white_label import WhiteLabelConfig
+from app.models.ivr import IvrCall
+from app.models.poi import PoiLocation, PoiStatusReport
+from app.models.prepaid import PrepaidMeter, PrepaidTopupReminder
+from app.models.grid_topology import GridTransformer, TransformerCellCoverage
+from app.models.seasonal import SeasonalStats
+from app.models.transfer_learning import RegionSimilarity
+from app.models.regulatory import RegulatoryReport, DispatchRecommendation
