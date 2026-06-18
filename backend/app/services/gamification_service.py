@@ -149,7 +149,7 @@ async def _do_award_points(user_id: uuid.UUID, action: str, reference_id: str | 
     db.add(PointTransaction(user_id=user_id, points=pts, action=action, reference_id=reference_id))
     await db.flush()
 
-    await _check_and_award_badges(user_id, up)
+    await _check_and_award_badges(user_id, up, db)
     return up.total_points
 
 
@@ -170,8 +170,7 @@ async def award_points(user_id: uuid.UUID, action: str, reference_id: str | None
         return total
 
 
-async def _check_and_award_badges(user_id: uuid.UUID, up: "UserPoints") -> None:
-    from app.core.database import AsyncSessionLocal
+async def _check_and_award_badges(user_id: uuid.UUID, up: "UserPoints", db=None) -> None:
     from app.models.community import UserBadge
     from sqlalchemy import select
 
@@ -182,8 +181,8 @@ async def _check_and_award_badges(user_id: uuid.UUID, up: "UserPoints") -> None:
         "total_points": up.total_points,
     }
 
-    async with AsyncSessionLocal() as db:
-        existing_result = await db.execute(
+    async def _run(session) -> None:
+        existing_result = await session.execute(
             select(UserBadge.badge_key).where(UserBadge.user_id == user_id)
         )
         existing_keys = {r[0] for r in existing_result.fetchall()}
@@ -192,7 +191,7 @@ async def _check_and_award_badges(user_id: uuid.UUID, up: "UserPoints") -> None:
             if key in existing_keys:
                 continue
             if badge["condition"](stats):
-                db.add(UserBadge(
+                session.add(UserBadge(
                     user_id=user_id,
                     badge_key=key,
                     badge_name=badge["name"],
@@ -201,7 +200,14 @@ async def _check_and_award_badges(user_id: uuid.UUID, up: "UserPoints") -> None:
                 ))
                 log.info(f"Badge awarded: {key} → user {user_id}")
 
-        await db.commit()
+    if db is not None:
+        await _run(db)
+        await db.flush()
+    else:
+        from app.core.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as _db:
+            await _run(_db)
+            await _db.commit()
 
 
 async def get_user_stats(user_id: uuid.UUID) -> dict:
