@@ -41,6 +41,10 @@ __all__ = [
     "SeasonalStats",
     "RegionSimilarity",
     "RegulatoryReport", "DispatchRecommendation",
+    "GridLoadSnapshot",
+    "SubscriptionPlan", "UserSubscription", "BillingEvent",
+    "PublicApiKey", "PublicApiUsage",
+    "GnnPrediction",
 ]
 
 from app.models.enterprise import UtilityCompany, BusinessProfile, WebhookSubscription, WebhookEvent
@@ -60,3 +64,7 @@ from app.models.grid_topology import GridTransformer, TransformerCellCoverage
 from app.models.seasonal import SeasonalStats
 from app.models.transfer_learning import RegionSimilarity
 from app.models.regulatory import RegulatoryReport, DispatchRecommendation
+from app.models.grid_load import GridLoadSnapshot
+from app.models.billing import SubscriptionPlan, UserSubscription, BillingEvent
+from app.models.public_api import PublicApiKey, PublicApiUsage
+from app.models.gnn_model import GnnPrediction

@@ -38,6 +38,13 @@ async def subscribe(
     return sub
 
 
+@router.get("/vapid-public-key")
+async def vapid_public_key():
+    import os
+    key = os.getenv("VAPID_PUBLIC_KEY", "")
+    return {"vapid_public_key": key}
+
+
 @router.delete("/unsubscribe", status_code=204)
 async def unsubscribe(
     endpoint: str,

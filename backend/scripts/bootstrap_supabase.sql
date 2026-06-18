@@ -713,9 +713,143 @@ CREATE TABLE IF NOT EXISTS dispatch_recommendations (
 );
 
 -- ════════════════════════════════════════════════════════════
---  Mark alembic as fully migrated to revision 0021
+--  0022 — grid load snapshots
 -- ════════════════════════════════════════════════════════════
 
+CREATE TABLE IF NOT EXISTS grid_load_snapshots (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    region          VARCHAR(100) NOT NULL,
+    source          VARCHAR(20) NOT NULL,
+    load_mw         FLOAT,
+    capacity_mw     FLOAT,
+    load_pct        FLOAT,
+    renewable_pct   FLOAT,
+    recorded_at     TIMESTAMPTZ NOT NULL,
+    fetched_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_grid_load_region ON grid_load_snapshots (region);
+CREATE INDEX IF NOT EXISTS ix_grid_load_recorded_at ON grid_load_snapshots (recorded_at);
+
+-- ════════════════════════════════════════════════════════════
+--  0023 — push_subscriptions: is_active, updated_at
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE push_subscriptions
+    ADD COLUMN IF NOT EXISTS is_active  BOOLEAN DEFAULT TRUE NOT NULL,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- ════════════════════════════════════════════════════════════
+--  0024 — billing
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name                    VARCHAR(50) UNIQUE NOT NULL,
+    display_name            VARCHAR(100) NOT NULL,
+    price_usd_monthly       FLOAT DEFAULT 0,
+    price_usd_yearly        FLOAT DEFAULT 0,
+    max_locations           INTEGER DEFAULT 1,
+    max_alert_subscriptions INTEGER DEFAULT 3,
+    sms_alerts_per_month    INTEGER DEFAULT 10,
+    api_access              BOOLEAN DEFAULT FALSE,
+    webhook_access          BOOLEAN DEFAULT FALSE,
+    white_label             BOOLEAN DEFAULT FALSE,
+    data_export             BOOLEAN DEFAULT FALSE,
+    stripe_monthly_price_id VARCHAR(100),
+    stripe_yearly_price_id  VARCHAR(100),
+    created_at              TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+    id                       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id                  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id                  UUID NOT NULL REFERENCES subscription_plans(id),
+    stripe_customer_id       VARCHAR(100),
+    stripe_subscription_id   VARCHAR(100),
+    status                   VARCHAR(20) DEFAULT 'active' NOT NULL,
+    current_period_start     TIMESTAMPTZ,
+    current_period_end       TIMESTAMPTZ,
+    created_at               TIMESTAMPTZ DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_user_subscriptions_user_id ON user_subscriptions (user_id);
+
+CREATE TABLE IF NOT EXISTS billing_events (
+    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id          UUID REFERENCES users(id) ON DELETE SET NULL,
+    stripe_event_id  VARCHAR(100) UNIQUE,
+    event_type       VARCHAR(80) NOT NULL,
+    amount_usd       FLOAT,
+    currency         CHAR(3),
+    payload          JSONB,
+    created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed default plans
+INSERT INTO subscription_plans (name, display_name, price_usd_monthly, price_usd_yearly, max_locations, max_alert_subscriptions, sms_alerts_per_month, api_access, data_export, white_label)
+VALUES
+    ('free',       'Free',       0,    0,      1,  3,   10,  FALSE, FALSE, FALSE),
+    ('pro',        'Pro',        9.99, 99.99,  5,  20,  100, TRUE,  FALSE, FALSE),
+    ('business',   'Business',  49.0, 490.0,  25, 100, 1000, TRUE, TRUE,  FALSE),
+    ('enterprise', 'Enterprise',199.0,1990.0, -1, -1,  -1,  TRUE,  TRUE,  TRUE)
+ON CONFLICT (name) DO NOTHING;
+
+-- ════════════════════════════════════════════════════════════
+--  0025 — public API keys
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS public_api_keys (
+    id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization          VARCHAR(200) NOT NULL,
+    contact_email         VARCHAR(255) NOT NULL,
+    key_hash              CHAR(64) UNIQUE NOT NULL,
+    key_prefix            CHAR(8) NOT NULL,
+    tier                  VARCHAR(20) DEFAULT 'ngo',
+    allowed_regions       JSONB,
+    rate_limit_per_minute INTEGER DEFAULT 60,
+    rate_limit_per_day    INTEGER DEFAULT 1000,
+    is_active             BOOLEAN DEFAULT TRUE,
+    created_at            TIMESTAMPTZ DEFAULT NOW(),
+    last_used_at          TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS public_api_usage (
+    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    api_key_id       UUID NOT NULL REFERENCES public_api_keys(id) ON DELETE CASCADE,
+    endpoint         VARCHAR(200) NOT NULL,
+    method           VARCHAR(10) NOT NULL,
+    status_code      INTEGER,
+    response_time_ms INTEGER,
+    ip_address       VARCHAR(45),
+    created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_public_api_usage_key_id ON public_api_usage (api_key_id);
+CREATE INDEX IF NOT EXISTS ix_public_api_usage_created_at ON public_api_usage (created_at);
+
+-- ════════════════════════════════════════════════════════════
+--  0026 — GNN predictions
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS gnn_predictions (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    h3_index        VARCHAR(15) NOT NULL,
+    transformer_id  UUID REFERENCES grid_transformers(id) ON DELETE SET NULL,
+    predicted_at    TIMESTAMPTZ DEFAULT NOW(),
+    window_start    TIMESTAMPTZ NOT NULL,
+    probability     FLOAT NOT NULL,
+    cascade_risk    FLOAT,
+    affected_cells  JSONB,
+    model_version   VARCHAR(20) DEFAULT 'gnn_v0' NOT NULL,
+    confidence      FLOAT
+);
+CREATE INDEX IF NOT EXISTS ix_gnn_predictions_h3_index ON gnn_predictions (h3_index);
+CREATE INDEX IF NOT EXISTS ix_gnn_predictions_predicted_at ON gnn_predictions (predicted_at);
+
+-- ════════════════════════════════════════════════════════════
+--  Mark alembic as fully migrated to revision 0026
+-- ════════════════════════════════════════════════════════════
+
+DELETE FROM alembic_version;
 INSERT INTO alembic_version (version_num)
-VALUES ('0021')
+VALUES ('0026')
 ON CONFLICT DO NOTHING;

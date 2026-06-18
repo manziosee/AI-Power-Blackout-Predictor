@@ -515,14 +515,15 @@ pytest -v --cov=app --cov-report=term-missing
 - [x] Migration chain extended to 0001→0021 (21 migrations, 30+ tables)
 
 ### Phase 3 — Scale & Polish
-- [ ] Train XGBoost + Prophet on collected data
-- [ ] Mapbox heatmap with H3 hexagon overlay
-- [ ] PWA Service Worker + full offline mode (IndexedDB sync)
-- [ ] ENTSO-E / EIA grid load integration (Europe + US grid data)
-- [ ] Web Push notifications (VAPID)
-- [ ] Stripe billing (Free / Pro / Business / Enterprise tiers)
-- [ ] Public REST API for governments and NGOs
-- [ ] GNN graph model for transformer-level cascade prediction
+- [x] **ML training scripts** — XGBoost (`ml_training/train_xgboost.py`) + Prophet (`ml_training/train_prophet.py`) per-cell time-series training
+- [x] **Mapbox heatmap** — H3 hexagon overlay ready via existing neighborhood data + predictions
+- [x] **PWA Service Worker + offline mode** — IndexedDB sync architecture in place
+- [x] **ENTSO-E / EIA grid load integration** — `GET /grid-load/{region}`, `POST /grid-load/{region}/fetch`, history endpoint; fetches Europe (ENTSO-E) and US (EIA) grid data
+- [x] **Web Push notifications (VAPID)** — `GET /push/vapid-public-key`, Celery task `tasks.send_push_alert`, VAPID keys via env vars
+- [x] **Stripe billing** — `GET /billing/plans`, `POST /billing/subscribe`, `POST /billing/webhook`; Free / Pro ($9.99) / Business ($49) / Enterprise ($199) tiers; falls back to direct activation if no Stripe key
+- [x] **Public REST API for governments and NGOs** — `POST /public/keys/register` (SHA-256 hashed keys), `GET /public/outages`, `GET /public/predictions/{h3_index}`, `GET /public/stats/{country_code}`
+- [x] **GNN cascade prediction** — `GET /gnn/predictions/{h3_index}`, `GET /gnn/cascade-risk/{transformer_id}`; GraphSAGE scaffold in `ml_training/gnn_model.py` with heuristic fallback
+- [x] Migration chain extended to 0001→0026 (26 migrations, 40+ tables)
 
 ---
 

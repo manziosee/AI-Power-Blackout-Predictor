@@ -4,12 +4,15 @@ from app.api.v1.endpoints import (
     admin,
     alerts,
     analytics,
+    billing,
     business,
     community,
     data_marketplace,
     dispatch,
     email_alerts,
     feedback,
+    gnn,
+    grid_load,
     grid_topology,
     insights,
     insurance,
@@ -21,6 +24,7 @@ from app.api.v1.endpoints import (
     poi,
     predictions,
     prepaid,
+    public_api,
     push,
     regulatory,
     reports,
@@ -73,3 +77,7 @@ api_router.include_router(seasonal.router, prefix="/seasonal", tags=["Seasonal"]
 api_router.include_router(transfer_learning.router, prefix="/transfer-learning", tags=["Transfer Learning"])
 api_router.include_router(regulatory.router, prefix="/regulatory", tags=["Regulatory"])
 api_router.include_router(dispatch.router, prefix="/dispatch", tags=["Dispatch"])
+api_router.include_router(grid_load.router, prefix="/grid-load", tags=["Grid Load"])
+api_router.include_router(billing.router, prefix="/billing", tags=["Billing"])
+api_router.include_router(public_api.router, prefix="/public", tags=["Public API"])
+api_router.include_router(gnn.router, prefix="/gnn", tags=["GNN"])
