@@ -45,7 +45,7 @@ async def report_outage(
     # Award points + trigger neighbor alert asynchronously
     from app.services.gamification_service import award_points
     from app.tasks.community_tasks import send_neighbor_alerts
-    await award_points(current_user.id, "report", str(report.id))
+    await award_points(current_user.id, "report", str(report.id), db)
     send_neighbor_alerts.delay(str(report.id), h3_index, str(current_user.id))
 
     return report
@@ -108,7 +108,7 @@ async def confirm_outage(
 
     # Award confirm points to the confirmer
     from app.services.gamification_service import award_points
-    await award_points(_.id, "confirm", str(report.id))
+    await award_points(_.id, "confirm", str(report.id), db)
 
     # Fire instant alerts when newly verified
     if just_verified:

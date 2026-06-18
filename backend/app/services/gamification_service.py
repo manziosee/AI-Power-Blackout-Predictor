@@ -98,64 +98,76 @@ def get_level(total_points: int) -> dict:
     return {"name": level_name, "emoji": level_emoji, "next_at": next_threshold, "progress_pct": progress}
 
 
-async def award_points(user_id: uuid.UUID, action: str, reference_id: str | None = None) -> int:
-    """Award points for an action. Returns new total."""
+async def _do_award_points(user_id: uuid.UUID, action: str, reference_id: str | None, db) -> int:
+    """Core logic — operates on the given session without committing."""
+    from app.models.community import PointTransaction, UserPoints
+    from sqlalchemy import select
+
     pts = POINTS.get(action, 0)
     if pts == 0:
         return 0
 
-    from app.core.database import AsyncSessionLocal
-    from app.models.community import PointTransaction, UserPoints
-    from sqlalchemy import select
+    result = await db.execute(select(UserPoints).where(UserPoints.user_id == user_id))
+    up = result.scalar_one_or_none()
 
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(UserPoints).where(UserPoints.user_id == user_id))
-        up = result.scalar_one_or_none()
+    now = datetime.now(timezone.utc)
 
-        now = datetime.now(timezone.utc)
+    if not up:
+        up = UserPoints(
+            user_id=user_id,
+            total_points=0, weekly_points=0, monthly_points=0,
+            report_count=0, confirm_count=0, note_count=0,
+            current_streak_days=0,
+        )
+        db.add(up)
 
-        if not up:
-            up = UserPoints(
-                user_id=user_id,
-                total_points=0, weekly_points=0, monthly_points=0,
-                report_count=0, confirm_count=0, note_count=0,
-                current_streak_days=0,
-            )
-            db.add(up)
-
-        # Streak check
-        if up.last_action_at:
-            gap = (now - up.last_action_at).days
-            if gap == 1:
-                up.current_streak_days += 1
-                if up.current_streak_days % 7 == 0:
-                    pts += POINTS["streak_bonus"]
-                    db.add(PointTransaction(user_id=user_id, points=POINTS["streak_bonus"], action="streak_bonus"))
-            elif gap > 1:
-                up.current_streak_days = 1
-        else:
+    # Streak check
+    if up.last_action_at:
+        gap = (now - up.last_action_at).days
+        if gap == 1:
+            up.current_streak_days += 1
+            if up.current_streak_days % 7 == 0:
+                pts += POINTS["streak_bonus"]
+                db.add(PointTransaction(user_id=user_id, points=POINTS["streak_bonus"], action="streak_bonus"))
+        elif gap > 1:
             up.current_streak_days = 1
+    else:
+        up.current_streak_days = 1
 
-        up.total_points += pts
-        up.weekly_points += pts
-        up.monthly_points += pts
-        up.last_action_at = now
+    up.total_points += pts
+    up.weekly_points += pts
+    up.monthly_points += pts
+    up.last_action_at = now
 
-        if action == "report":
-            up.report_count += 1
-        elif action == "confirm":
-            up.confirm_count += 1
-        elif action == "add_note":
-            up.note_count += 1
+    if action == "report":
+        up.report_count += 1
+    elif action == "confirm":
+        up.confirm_count += 1
+    elif action == "add_note":
+        up.note_count += 1
 
-        db.add(PointTransaction(user_id=user_id, points=pts, action=action, reference_id=reference_id))
-        await db.commit()
-        await db.refresh(up)
+    db.add(PointTransaction(user_id=user_id, points=pts, action=action, reference_id=reference_id))
+    await db.flush()
 
-        # Check for new badges (fire and forget)
-        await _check_and_award_badges(user_id, up)
+    await _check_and_award_badges(user_id, up)
+    return up.total_points
 
-        return up.total_points
+
+async def award_points(user_id: uuid.UUID, action: str, reference_id: str | None = None, db=None) -> int:
+    """Award points for an action. Returns new total.
+
+    Pass `db` when called from within a request handler so the write uses the
+    same session (avoids SQLite database-is-locked under concurrent transactions).
+    Omit `db` from background tasks — a dedicated session is opened and committed.
+    """
+    if db is not None:
+        return await _do_award_points(user_id, action, reference_id, db)
+
+    from app.core.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as _db:
+        total = await _do_award_points(user_id, action, reference_id, _db)
+        await _db.commit()
+        return total
 
 
 async def _check_and_award_badges(user_id: uuid.UUID, up: "UserPoints") -> None:

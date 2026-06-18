@@ -79,7 +79,7 @@ async def add_note(
 
     # Award points for contributing a note
     from app.services.gamification_service import award_points
-    await award_points(current_user.id, "add_note", str(note.id))
+    await award_points(current_user.id, "add_note", str(note.id), db)
 
     result = NoteOut.model_validate(note)
     result.is_mine = True
