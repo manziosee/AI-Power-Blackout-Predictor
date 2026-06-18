@@ -115,7 +115,12 @@ async def award_points(user_id: uuid.UUID, action: str, reference_id: str | None
         now = datetime.now(timezone.utc)
 
         if not up:
-            up = UserPoints(user_id=user_id, total_points=0, weekly_points=0, monthly_points=0)
+            up = UserPoints(
+                user_id=user_id,
+                total_points=0, weekly_points=0, monthly_points=0,
+                report_count=0, confirm_count=0, note_count=0,
+                current_streak_days=0,
+            )
             db.add(up)
 
         # Streak check
