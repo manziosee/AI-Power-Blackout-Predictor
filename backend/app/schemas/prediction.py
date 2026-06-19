@@ -15,6 +15,9 @@ class PredictionOut(BaseModel):
     risk_level: str
     model_version: str
     region_model: str
+    predicted_duration_min: int | None = None
+    predicted_duration_median: int | None = None
+    predicted_duration_max: int | None = None
 
     model_config = {"from_attributes": True}
 

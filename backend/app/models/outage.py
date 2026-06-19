@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,4 +22,6 @@ class OutageReport(Base):
     source: Mapped[str] = mapped_column(String(20), default="app")   # app | sms | ussd | api
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     verification_count: Mapped[int] = mapped_column(Integer, default=1)
+    # Weighted trust score sum — report is verified when this reaches VERIFY_THRESHOLD (3.0)
+    weighted_verification_score: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

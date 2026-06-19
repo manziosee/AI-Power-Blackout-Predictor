@@ -93,27 +93,41 @@ async def confirm_outage(
     When count reaches 3 the report is auto-verified and an instant SMS/push alert fires."""
     from app.tasks.instant_alert import confirmed_outage_alert
 
+    from app.models.community import UserPoints
+    from app.services.gamification_service import award_points
+
     result = await db.execute(select(OutageReport).where(OutageReport.id == report_id))
     report = result.scalar_one_or_none()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    report.verification_count += 1
+    # Look up confirmer's trust score (default 0.5 for new users)
+    up_result = await db.execute(select(UserPoints).where(UserPoints.user_id == _.id))
+    up = up_result.scalar_one_or_none()
+    trust = float(up.trust_score) if up else 0.5
 
-    just_verified = not report.verified and report.verification_count >= 3
+    report.verification_count += 1
+    report.weighted_verification_score = (report.weighted_verification_score or 0.0) + trust
+
+    # Verified when weighted score reaches 3.0 (equivalent to 3 avg-trust users)
+    just_verified = not report.verified and report.weighted_verification_score >= 3.0
     if just_verified:
         report.verified = True
 
     await db.flush()
 
-    # Award confirm points to the confirmer
-    from app.services.gamification_service import award_points
     await award_points(_.id, "confirm", str(report.id), db)
 
-    # Fire instant alerts when newly verified
+    # Update confirmer's trust score after confirming
+    from app.services.gamification_service import recompute_trust_score
+    await recompute_trust_score(_.id, db)
+
     if just_verified:
         confirmed_outage_alert.delay(report.h3_index, str(report.id))
         from app.tasks.webhook_dispatch import fire_confirmed_outage_webhooks
         fire_confirmed_outage_webhooks.delay(report.h3_index, str(report.id))
+        # Auto-create restoration tracking event
+        from app.services.restoration_service import create_restoration_event
+        await create_restoration_event(report.id, report.h3_index, None, db)
 
     return report

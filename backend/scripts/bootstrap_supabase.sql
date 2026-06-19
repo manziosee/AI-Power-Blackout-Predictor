@@ -846,10 +846,50 @@ CREATE INDEX IF NOT EXISTS ix_gnn_predictions_h3_index ON gnn_predictions (h3_in
 CREATE INDEX IF NOT EXISTS ix_gnn_predictions_predicted_at ON gnn_predictions (predicted_at);
 
 -- ════════════════════════════════════════════════════════════
---  Mark alembic as fully migrated to revision 0026
+--  0027 — restoration events
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS restoration_events (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    outage_report_id    UUID NOT NULL REFERENCES outage_reports(id) ON DELETE CASCADE,
+    h3_index            VARCHAR(15) NOT NULL,
+    utility_id          UUID REFERENCES utility_companies(id) ON DELETE SET NULL,
+    status              VARCHAR(20) NOT NULL DEFAULT 'reported',
+    eta_minutes         INTEGER,
+    crew_count          INTEGER,
+    crew_reference      VARCHAR(100),
+    notes               TEXT,
+    resolved_at         TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_restoration_outage_id ON restoration_events (outage_report_id);
+CREATE INDEX IF NOT EXISTS ix_restoration_h3_index  ON restoration_events (h3_index);
+
+-- ════════════════════════════════════════════════════════════
+--  0028 — maintenance scoring columns on grid_transformers
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE grid_transformers
+    ADD COLUMN IF NOT EXISTS maintenance_risk_score FLOAT,
+    ADD COLUMN IF NOT EXISTS failure_count_90d      INTEGER,
+    ADD COLUMN IF NOT EXISTS last_scored_at         TIMESTAMPTZ;
+
+-- ════════════════════════════════════════════════════════════
+--  0029 — trust score + weighted verification
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE user_points
+    ADD COLUMN IF NOT EXISTS trust_score FLOAT NOT NULL DEFAULT 0.5;
+
+ALTER TABLE outage_reports
+    ADD COLUMN IF NOT EXISTS weighted_verification_score FLOAT NOT NULL DEFAULT 0;
+
+-- ════════════════════════════════════════════════════════════
+--  Mark alembic as fully migrated to revision 0029
 -- ════════════════════════════════════════════════════════════
 
 DELETE FROM alembic_version;
 INSERT INTO alembic_version (version_num)
-VALUES ('0026')
+VALUES ('0029')
 ON CONFLICT DO NOTHING;

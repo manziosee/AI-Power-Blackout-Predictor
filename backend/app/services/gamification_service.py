@@ -300,6 +300,33 @@ async def reset_weekly_points() -> None:
         await db.commit()
 
 
+async def recompute_trust_score(user_id: uuid.UUID, db) -> float:
+    """Recalculate trust score from verified report accuracy. Called after each confirm.
+
+    Formula:
+      - Base 0.5 for all users
+      - +0.1 per 10 confirmed (accurate) reports (max +0.3)
+      - -0.05 per rejected/fraudulent report flag (capped)
+      - Streak bonus: +0.05 if streak >= 14 days
+      Clamped to [0.1, 1.0].
+    """
+    from app.models.community import UserPoints
+    from sqlalchemy import select
+
+    result = await db.execute(select(UserPoints).where(UserPoints.user_id == user_id))
+    up = result.scalar_one_or_none()
+    if not up:
+        return 0.5
+
+    accuracy_bonus = min((up.confirm_count // 10) * 0.1, 0.30)
+    streak_bonus = 0.05 if up.current_streak_days >= 14 else 0.0
+    score = round(min(max(0.5 + accuracy_bonus + streak_bonus, 0.1), 1.0), 4)
+
+    up.trust_score = score
+    await db.flush()
+    return score
+
+
 def _mask_phone(phone: str) -> str:
     if len(phone) < 6:
         return "****"

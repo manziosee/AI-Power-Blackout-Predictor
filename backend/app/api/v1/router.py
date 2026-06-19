@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     insights,
     insurance,
     ivr,
+    maintenance,
     medical_priority,
     neighborhoods,
     outages,
@@ -29,6 +30,7 @@ from app.api.v1.endpoints import (
     regulatory,
     reports,
     resilience,
+    restoration,
     seasonal,
     sms_inbound,
     telegram,
@@ -81,3 +83,5 @@ api_router.include_router(grid_load.router, prefix="/grid-load", tags=["Grid Loa
 api_router.include_router(billing.router, prefix="/billing", tags=["Billing"])
 api_router.include_router(public_api.router, prefix="/public", tags=["Public API"])
 api_router.include_router(gnn.router, prefix="/gnn", tags=["GNN"])
+api_router.include_router(restoration.router, prefix="/restoration", tags=["Restoration"])
+api_router.include_router(maintenance.router, prefix="/maintenance", tags=["Maintenance"])

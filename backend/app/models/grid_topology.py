@@ -24,6 +24,9 @@ class GridTransformer(Base):
     )
     status: Mapped[str] = mapped_column(String(20), default="active")
     last_maintenance_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    maintenance_risk_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    failure_count_90d: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

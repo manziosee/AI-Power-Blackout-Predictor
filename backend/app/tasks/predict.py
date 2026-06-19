@@ -159,9 +159,22 @@ async def _run():
                     )
                     results[feat["h3_index"]] = (p, _classify(p), "rule-based-v0")
 
+        # Pre-fetch duration estimates (batch async)
+        from app.services.duration_service import predict_duration
+        duration_cache: dict[str, dict] = {}
+        # Only compute for cells with non-trivial risk to avoid N+1 cost
+        high_risk_cells = [c for c in cells if results.get(c.h3_index, (0,))[0] >= 0.35]
+        for cell in high_risk_cells:
+            try:
+                dur = await predict_duration(cell.h3_index, cell.country_code)
+                duration_cache[cell.h3_index] = dur
+            except Exception:
+                pass
+
         # Persist predictions
         for cell in cells:
             prob, risk, version = results.get(cell.h3_index, (0.05, "LOW", "rule-based-v0"))
+            dur = duration_cache.get(cell.h3_index)
             db.add(Prediction(
                 h3_index=cell.h3_index,
                 window_start=window_start,
@@ -171,6 +184,9 @@ async def _run():
                 risk_level=risk,
                 model_version=version,
                 region_model=_resolve_region(cell.country_code),
+                predicted_duration_min=dur["min_minutes"] if dur else None,
+                predicted_duration_median=dur["median_minutes"] if dur else None,
+                predicted_duration_max=dur["max_minutes"] if dur else None,
             ))
 
         await db.commit()

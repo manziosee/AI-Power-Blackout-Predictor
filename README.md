@@ -525,6 +525,13 @@ pytest -v --cov=app --cov-report=term-missing
 - [x] **GNN cascade prediction** — `GET /gnn/predictions/{h3_index}`, `GET /gnn/cascade-risk/{transformer_id}`; GraphSAGE scaffold in `ml_training/gnn_model.py` with heuristic fallback
 - [x] Migration chain extended to 0001→0026 (26 migrations, 40+ tables)
 
+### Phase 4 — High Impact Core
+- [x] **Outage duration prediction** — Second XGBoost regression model predicts `min/median/max` duration per outage; wired into every 4-hour prediction run for MEDIUM+ risk cells; `predicted_duration_min/median/max` exposed in `PredictionOut`; training script `ml_training/train_duration_model.py`
+- [x] **Restoration ETA tracking** — `RestorationEvent` lifecycle (reported → crew_assigned → crew_en_route → crew_on_site → restored); `GET /restoration/cell/{h3}`, `GET /restoration/outage/{id}`, `PATCH /restoration/{id}/status`; auto-created when outage is verified; Celery task `broadcast_restoration_update` pushes ETA to all cell subscribers
+- [x] **Predictive maintenance scoring** — `maintenance_risk_score` per transformer (age × outage density × GNN cascade risk × maintenance lag); `GET /maintenance/transformers/at-risk` returns top-N ranked list; weekly Celery task `score_transformers`; CRITICAL/HIGH/MEDIUM/LOW labels
+- [x] **Community trust-weighted verification** — `trust_score` (0.1–1.0) on each user; confirmation adds `trust_score` to `weighted_verification_score`; outage verified when score ≥ 3.0 (not just raw count 3); trust auto-recomputes after each confirm via `recompute_trust_score()`
+- [x] Migration chain extended to 0001→0029 (29 migrations, 45+ tables)
+
 ---
 
 ## Contributing

@@ -45,6 +45,7 @@ __all__ = [
     "SubscriptionPlan", "UserSubscription", "BillingEvent",
     "PublicApiKey", "PublicApiUsage",
     "GnnPrediction",
+    "RestorationEvent",
 ]
 
 from app.models.enterprise import UtilityCompany, BusinessProfile, WebhookSubscription, WebhookEvent
@@ -68,3 +69,4 @@ from app.models.grid_load import GridLoadSnapshot
 from app.models.billing import SubscriptionPlan, UserSubscription, BillingEvent
 from app.models.public_api import PublicApiKey, PublicApiUsage
 from app.models.gnn_model import GnnPrediction
+from app.models.restoration import RestorationEvent

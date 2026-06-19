@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +22,8 @@ class UserPoints(Base):
     current_streak_days: Mapped[int] = mapped_column(Integer, default=0)
     last_action_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    # Trust score: 0.0 (untrusted) – 1.0 (highly trusted). New users start at 0.5.
+    trust_score: Mapped[float] = mapped_column(Float, default=0.5, server_default="0.5")
 
 
 class UserBadge(Base):
