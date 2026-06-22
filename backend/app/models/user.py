@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Time, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Time, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -45,6 +45,8 @@ class UserLocation(Base):
     quiet_hours_start: Mapped[time | None] = mapped_column(Time, nullable=True)
     quiet_hours_end: Mapped[time | None] = mapped_column(Time, nullable=True)
     notify_channels: Mapped[list] = mapped_column(JSONB, default=["sms", "push"])
+    location_type: Mapped[str | None] = mapped_column(String(20), nullable=True)  # home/office/family/other
+    display_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="locations")

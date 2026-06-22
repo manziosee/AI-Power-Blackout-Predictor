@@ -20,6 +20,7 @@ class OutageReportOut(BaseModel):
     id: uuid.UUID
     h3_index: str
     reported_at: datetime
+    confirmed_at: datetime | None = None
     resolved_at: datetime | None
     duration_minutes: int | None
     source: str

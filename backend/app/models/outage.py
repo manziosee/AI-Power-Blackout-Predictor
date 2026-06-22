@@ -24,4 +24,5 @@ class OutageReport(Base):
     verification_count: Mapped[int] = mapped_column(Integer, default=1)
     # Weighted trust score sum — report is verified when this reaches VERIFY_THRESHOLD (3.0)
     weighted_verification_score: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

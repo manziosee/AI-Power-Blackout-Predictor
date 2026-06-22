@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     analytics,
     billing,
     business,
+    calendar,
     community,
     data_marketplace,
     dispatch,
@@ -85,3 +86,4 @@ api_router.include_router(public_api.router, prefix="/public", tags=["Public API
 api_router.include_router(gnn.router, prefix="/gnn", tags=["GNN"])
 api_router.include_router(restoration.router, prefix="/restoration", tags=["Restoration"])
 api_router.include_router(maintenance.router, prefix="/maintenance", tags=["Maintenance"])
+api_router.include_router(calendar.router)

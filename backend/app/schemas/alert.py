@@ -11,6 +11,7 @@ class AlertSubscriptionCreate(BaseModel):
     channels: List[str] = ["sms", "push"]
     quiet_hours_start: time | None = None
     quiet_hours_end: time | None = None
+    quiet_risk_override: str | None = None  # HIGH / VERY_HIGH / CRITICAL
 
 
 class AlertSubscriptionOut(BaseModel):
@@ -18,6 +19,9 @@ class AlertSubscriptionOut(BaseModel):
     h3_index: str
     threshold_probability: float
     channels: List[str]
+    quiet_hours_start: time | None = None
+    quiet_hours_end: time | None = None
+    quiet_risk_override: str | None = None
     is_active: bool
 
     model_config = {"from_attributes": True}

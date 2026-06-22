@@ -54,7 +54,7 @@ async def _dispatch():
             if not user or not user.is_active:
                 continue
 
-            if _is_quiet_hours(sub):
+            if _is_quiet_hours(sub, prediction.probability):
                 continue
 
             if "sms" in (sub.channels or []):
@@ -84,8 +84,18 @@ async def _dispatch():
         await db.commit()
 
 
-def _is_quiet_hours(sub: "AlertSubscription") -> bool:
+_QUIET_THRESHOLDS = {"HIGH": 0.50, "VERY_HIGH": 0.75, "CRITICAL": 0.90}
+
+
+def _is_quiet_hours(sub: "AlertSubscription", probability: float = 0.0) -> bool:
     if not sub.quiet_hours_start or not sub.quiet_hours_end:
         return False
     now_time = datetime.now(timezone.utc).time()
-    return sub.quiet_hours_start <= now_time <= sub.quiet_hours_end
+    in_quiet = sub.quiet_hours_start <= now_time <= sub.quiet_hours_end
+    if not in_quiet:
+        return False
+    override = getattr(sub, "quiet_risk_override", None)
+    if not override:
+        return True
+    floor = _QUIET_THRESHOLDS.get(override, 0.90)
+    return probability < floor

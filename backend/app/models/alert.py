@@ -24,6 +24,7 @@ class AlertSubscription(Base):
     channels: Mapped[dict] = mapped_column(JSONB, default=["sms", "push"])
     quiet_hours_start: Mapped[time | None] = mapped_column(Time, nullable=True)
     quiet_hours_end: Mapped[time | None] = mapped_column(Time, nullable=True)
+    quiet_risk_override: Mapped[str | None] = mapped_column(String(20), nullable=True)  # HIGH/VERY_HIGH/CRITICAL
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user: Mapped["User"] = relationship("User", back_populates="subscriptions")

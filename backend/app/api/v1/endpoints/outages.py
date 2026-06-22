@@ -1,7 +1,9 @@
 import uuid
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -69,8 +71,6 @@ async def resolve_outage(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from datetime import datetime, timezone
-
     result = await db.execute(
         select(OutageReport).where(OutageReport.id == report_id, OutageReport.user_id == current_user.id)
     )
@@ -81,6 +81,36 @@ async def resolve_outage(
     report.resolved_at = datetime.now(timezone.utc)
     report.duration_minutes = payload.duration_minutes
     return report
+
+
+# ── Timeline ────────────────────────────────────────────────────────────────
+
+class TimelineEventOut(BaseModel):
+    step: str
+    label: str
+    occurred_at: datetime | None
+    pending: bool
+
+    model_config = {"from_attributes": True}
+
+
+class TimelineOut(BaseModel):
+    report_id: uuid.UUID
+    events: list[TimelineEventOut]
+
+
+@router.get("/{report_id}/timeline", response_model=TimelineOut)
+async def get_outage_timeline(report_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    from app.services.timeline_service import build_timeline
+    events = await build_timeline(report_id, db)
+    if events is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return TimelineOut(
+        report_id=report_id,
+        events=[TimelineEventOut(
+            step=e.step, label=e.label, occurred_at=e.occurred_at, pending=e.pending
+        ) for e in events],
+    )
 
 
 @router.post("/{report_id}/confirm", response_model=OutageReportOut)
@@ -108,6 +138,8 @@ async def confirm_outage(
 
     report.verification_count += 1
     report.weighted_verification_score = (report.weighted_verification_score or 0.0) + trust
+    if report.confirmed_at is None and report.verification_count >= 2:
+        report.confirmed_at = datetime.now(timezone.utc)
 
     # Verified when weighted score reaches 3.0 (equivalent to 3 avg-trust users)
     just_verified = not report.verified and report.weighted_verification_score >= 3.0

@@ -49,6 +49,9 @@ async def me(current_user: User = Depends(get_current_user)):
 
 # ── Locations ──────────────────────────────────────────────────────────────────
 
+_LOCATION_TYPES = {"home", "office", "family", "other"}
+
+
 class LocationCreate(BaseModel):
     h3_index: str
     label: str | None = None
@@ -57,6 +60,8 @@ class LocationCreate(BaseModel):
     quiet_hours_start: time | None = None
     quiet_hours_end: time | None = None
     notify_channels: list[str] = ["sms", "push"]
+    location_type: str | None = None
+    display_order: int = 0
 
 
 class LocationUpdate(BaseModel):
@@ -67,6 +72,8 @@ class LocationUpdate(BaseModel):
     quiet_hours_start: time | None = None
     quiet_hours_end: time | None = None
     notify_channels: list[str] | None = None
+    location_type: str | None = None
+    display_order: int | None = None
 
 
 class LocationOut(BaseModel):
@@ -79,6 +86,8 @@ class LocationOut(BaseModel):
     quiet_hours_start: time | None
     quiet_hours_end: time | None
     notify_channels: list
+    location_type: str | None = None
+    display_order: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -89,9 +98,25 @@ async def list_locations(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(UserLocation).where(UserLocation.user_id == current_user.id).order_by(UserLocation.is_primary.desc())
+        select(UserLocation)
+        .where(UserLocation.user_id == current_user.id)
+        .order_by(UserLocation.display_order.asc(), UserLocation.is_primary.desc())
     )
     return result.scalars().all()
+
+
+async def _get_plan_max_locations(user_id: uuid.UUID, db: AsyncSession) -> int:
+    from app.models.billing import SubscriptionPlan, UserSubscription
+    sub = (await db.execute(
+        select(UserSubscription).where(
+            UserSubscription.user_id == user_id,
+            UserSubscription.status == "active",
+        )
+    )).scalar_one_or_none()
+    if not sub:
+        return 1
+    plan = (await db.execute(select(SubscriptionPlan).where(SubscriptionPlan.id == sub.plan_id))).scalar_one_or_none()
+    return plan.max_locations if plan else 1
 
 
 @router.post("/me/locations", response_model=LocationOut, status_code=status.HTTP_201_CREATED)
@@ -100,13 +125,25 @@ async def add_location(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Only one primary location at a time
-    if payload.is_primary:
-        await db.execute(
-            select(UserLocation).where(UserLocation.user_id == current_user.id)
+    if payload.location_type and payload.location_type not in _LOCATION_TYPES:
+        raise HTTPException(status_code=400, detail=f"location_type must be one of {sorted(_LOCATION_TYPES)}")
+
+    max_locs = await _get_plan_max_locations(current_user.id, db)
+    from sqlalchemy import func as sqlfunc
+    count = (await db.execute(
+        select(sqlfunc.count()).select_from(UserLocation).where(
+            UserLocation.user_id == current_user.id, UserLocation.is_active.is_(True)
         )
+    )).scalar()
+    if count >= max_locs:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Location limit reached ({max_locs}). Upgrade your plan to add more locations.",
+        )
+
+    if payload.is_primary:
         existing = (await db.execute(
-            select(UserLocation).where(UserLocation.user_id == current_user.id, UserLocation.is_primary)
+            select(UserLocation).where(UserLocation.user_id == current_user.id, UserLocation.is_primary.is_(True))
         )).scalars().all()
         for loc in existing:
             loc.is_primary = False
@@ -120,6 +157,8 @@ async def add_location(
         quiet_hours_start=payload.quiet_hours_start,
         quiet_hours_end=payload.quiet_hours_end,
         notify_channels=payload.notify_channels,
+        location_type=payload.location_type,
+        display_order=payload.display_order,
     )
     db.add(loc)
     await db.flush()
@@ -139,6 +178,9 @@ async def update_location(
     loc = result.scalar_one_or_none()
     if not loc:
         raise HTTPException(status_code=404, detail="Location not found")
+
+    if payload.location_type and payload.location_type not in _LOCATION_TYPES:
+        raise HTTPException(status_code=400, detail=f"location_type must be one of {sorted(_LOCATION_TYPES)}")
 
     if payload.is_primary:
         existing = (await db.execute(
