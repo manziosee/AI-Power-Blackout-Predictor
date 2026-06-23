@@ -24,7 +24,7 @@ from app.core.database import get_db
 from app.services.ussd_service import handle_ussd
 from fastapi.responses import PlainTextResponse
 
-router = APIRouter(prefix="/ussd", tags=["ussd"])
+router = APIRouter(prefix="/ussd", tags=["USSD"])
 logger = logging.getLogger(__name__)
 
 

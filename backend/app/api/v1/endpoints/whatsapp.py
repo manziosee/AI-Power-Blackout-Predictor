@@ -12,7 +12,7 @@ from app.models.notifications import WhatsAppSubscription
 from app.models.user import User
 from app.services.whatsapp_service import send_whatsapp_text
 
-router = APIRouter(prefix="/whatsapp", tags=["whatsapp"])
+router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
 log = logging.getLogger(__name__)
 
 # ── Webhook verification (GET) ────────────────────────────────────────────────

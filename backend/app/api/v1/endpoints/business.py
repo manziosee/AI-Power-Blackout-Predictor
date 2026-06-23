@@ -12,7 +12,7 @@ from app.models.enterprise import BusinessProfile
 from app.models.user import User
 from app.services.business_impact_service import BUSINESS_TYPE_LABELS, compute_impact, get_area_impact
 
-router = APIRouter(prefix="/business", tags=["business"])
+router = APIRouter(prefix="/business", tags=["Business"])
 
 
 class BusinessProfileCreate(BaseModel):

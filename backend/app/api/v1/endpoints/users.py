@@ -12,10 +12,12 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.models.user import User, UserLocation
 from app.schemas.user import Token, UserCreate, UserLogin, UserOut
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["Auth / Users"])
 
 
-@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED,
+             summary="Register a new user account",
+             description="Creates an account via phone number. Returns a JWT Bearer token for subsequent authenticated requests.")
 async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     existing = await db.execute(select(User).where(User.phone == payload.phone))
     if existing.scalar_one_or_none():
@@ -33,7 +35,7 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     return Token(access_token=create_access_token(str(user.id)))
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, summary="Authenticate and get a JWT token")
 async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.phone == payload.phone))
     user = result.scalar_one_or_none()
@@ -42,7 +44,7 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     return Token(access_token=create_access_token(str(user.id)))
 
 
-@router.get("/me", response_model=UserOut)
+@router.get("/me", response_model=UserOut, summary="Get the authenticated user's profile")
 async def me(current_user: User = Depends(get_current_user)):
     return current_user
 
@@ -92,7 +94,8 @@ class LocationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-@router.get("/me/locations", response_model=list[LocationOut])
+@router.get("/me/locations", response_model=list[LocationOut],
+            summary="List the current user's monitored locations")
 async def list_locations(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -119,7 +122,9 @@ async def _get_plan_max_locations(user_id: uuid.UUID, db: AsyncSession) -> int:
     return plan.max_locations if plan else 1
 
 
-@router.post("/me/locations", response_model=LocationOut, status_code=status.HTTP_201_CREATED)
+@router.post("/me/locations", response_model=LocationOut, status_code=status.HTTP_201_CREATED,
+             summary="Add a monitored location",
+             description="Adds an H3 cell to the user's monitored locations. Enforces plan-tier limits (Free=1, Pro=5, Business=25, Enterprise=unlimited).")
 async def add_location(
     payload: LocationCreate,
     current_user: User = Depends(get_current_user),

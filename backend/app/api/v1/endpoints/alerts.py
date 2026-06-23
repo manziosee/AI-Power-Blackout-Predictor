@@ -13,10 +13,12 @@ from app.models.alert import AlertSubscription, SmsAlert
 from app.models.user import User
 from app.schemas.alert import AlertSubscriptionCreate, AlertSubscriptionOut, SmsAlertOut
 
-router = APIRouter(prefix="/alerts", tags=["alerts"])
+router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
 
-@router.post("/subscriptions", response_model=AlertSubscriptionOut, status_code=201)
+@router.post("/subscriptions", response_model=AlertSubscriptionOut, status_code=201,
+             summary="Subscribe to alerts for an H3 cell",
+             description="Create an alert subscription for a location. Alerts fire via SMS/Push/WhatsApp/Telegram when prediction probability exceeds the threshold.")
 async def create_subscription(
     payload: AlertSubscriptionCreate,
     current_user: User = Depends(get_current_user),
@@ -28,7 +30,8 @@ async def create_subscription(
     return sub
 
 
-@router.get("/subscriptions", response_model=List[AlertSubscriptionOut])
+@router.get("/subscriptions", response_model=List[AlertSubscriptionOut],
+            summary="List the current user's alert subscriptions")
 async def list_subscriptions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -56,7 +59,8 @@ async def delete_subscription(
     await db.delete(sub)
 
 
-@router.get("/history", response_model=List[SmsAlertOut])
+@router.get("/history", response_model=List[SmsAlertOut],
+            summary="Recent SMS alert delivery history")
 async def alert_history(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -81,7 +85,9 @@ class QuietHoursUpdate(BaseModel):
     quiet_risk_override: str | None = None  # HIGH / VERY_HIGH / CRITICAL / null to clear
 
 
-@router.patch("/subscriptions/{sub_id}/quiet-hours", response_model=AlertSubscriptionOut)
+@router.patch("/subscriptions/{sub_id}/quiet-hours", response_model=AlertSubscriptionOut,
+              summary="Configure quiet hours and risk-level override",
+              description="Suppress alerts during sleeping hours. Set `quiet_risk_override` to HIGH/VERY_HIGH/CRITICAL to still receive critical-risk alerts even during quiet hours.")
 async def update_quiet_hours(
     sub_id: uuid.UUID,
     payload: QuietHoursUpdate,

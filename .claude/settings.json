@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"d:\\\\AI-Power-Blackout-Predictor\" && rm -rf frontend)",
+      "Bash(git restore *)",
+      "Bash(git commit -m ' *)",
+      "Bash(xargs git branch -d)",
+      "Bash(xargs git branch -D)",
+      "Bash(python -c ' *)",
+      "Bash(git commit *)",
+      "Bash(python -c \"from app.main import app; print\\('OK — app imports cleanly'\\)\")",
+      "Bash(python -m alembic --version)",
+      "Bash(python -m ruff check app/services/grid_load_service.py app/services/push_service.py app/services/billing_service.py app/services/public_api_service.py app/api/v1/endpoints/grid_load.py app/api/v1/endpoints/billing.py app/api/v1/endpoints/public_api.py app/api/v1/endpoints/gnn.py app/tasks/grid_load_fetch.py app/tasks/push_alert.py app/models/grid_load.py app/models/billing.py app/models/public_api.py app/models/gnn_model.py)",
+      "Bash(python -m ruff check backend/app/services/grid_load_service.py backend/app/services/push_service.py backend/app/services/billing_service.py backend/app/services/public_api_service.py backend/app/api/v1/endpoints/grid_load.py backend/app/api/v1/endpoints/billing.py backend/app/api/v1/endpoints/public_api.py backend/app/api/v1/endpoints/gnn.py backend/app/models/billing.py backend/app/models/public_api.py backend/app/models/gnn_model.py)",
+      "Bash(pip show *)",
+      "Bash(ruff --version)",
+      "PowerShell(& \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\.venv\\\\Scripts\\\\ruff.exe\" check \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\models\\\\outage.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\models\\\\user.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\models\\\\alert.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\services\\\\timeline_service.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\outages.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\users.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\alerts.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\api\\\\v1\\\\endpoints\\\\calendar.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\tasks\\\\alert.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\schemas\\\\outage.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\schemas\\\\alert.py\" \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\\\\api\\\\v1\\\\router.py\" 2>&1)",
+      "PowerShell(\\(Get-Command ruff -ErrorAction SilentlyContinue\\).Source)",
+      "PowerShell(git -C \"d:\\\\AI-Power-Blackout-Predictor\" status)",
+      "PowerShell(git -C \"d:\\\\AI-Power-Blackout-Predictor\" log --oneline -5)",
+      "PowerShell(git -C \"d:\\\\AI-Power-Blackout-Predictor\" add backend/app/api/v1/endpoints/alerts.py backend/app/api/v1/endpoints/outages.py backend/app/api/v1/endpoints/users.py backend/app/api/v1/router.py backend/app/models/alert.py backend/app/models/outage.py backend/app/models/user.py backend/app/schemas/alert.py backend/app/schemas/outage.py backend/app/tasks/alert.py backend/app/api/v1/endpoints/calendar.py backend/app/services/timeline_service.py backend/migrations/versions/0030_timeline_confirmed_at.py backend/migrations/versions/0031_location_type.py backend/migrations/versions/0032_quiet_risk_override.py)",
+      "PowerShell(git -C \"d:\\\\AI-Power-Blackout-Predictor\" push 2>&1)",
+      "PowerShell(git -C \"d:\\\\AI-Power-Blackout-Predictor\" status --short)",
+      "PowerShell(git -C \"d:\\\\AI-Power-Blackout-Predictor\" add backend/app/api/v1/endpoints/analytics.py backend/app/api/v1/endpoints/outages.py backend/app/api/v1/endpoints/public_api.py backend/app/api/v1/endpoints/utility.py backend/app/api/v1/router.py backend/app/models/__init__.py backend/app/models/outage.py backend/app/api/v1/endpoints/incidents.py backend/app/models/incident.py backend/app/services/incident_service.py backend/app/tasks/auto_claim.py backend/app/tasks/incident_cluster.py backend/app/tasks/prepaid_prediction_alert.py backend/migrations/versions/0033_outage_incidents.py)",
+      "PowerShell(git -C \"d:\\\\AI-Power-Blackout-Predictor\" add backend/app/api/v1/endpoints/admin.py backend/app/api/v1/endpoints/public_api.py backend/app/models/alert.py backend/app/tasks/alert.py backend/app/tasks/celery_app.py backend/app/core/rate_limit.py backend/app/tasks/model_monitor.py backend/app/tasks/sms_retry.py backend/migrations/versions/0034_sms_retry_fields.py)",
+      "Bash(python -m pytest backend/tests/ -x -q --tb=short)",
+      "Bash(python -m pytest tests/ -x -q --tb=short)",
+      "Read(//c/Users/oseem/AppData/Local/Programs/**)",
+      "PowerShell($pydir = \"C:\\\\Users\\\\oseem\\\\AppData\\\\Local\\\\Programs\\\\Python\"; Get-ChildItem $pydir -Name; Get-ChildItem \"$pydir\\\\Python313\\\\Scripts\" -Name | Select-String pytest)",
+      "PowerShell($py11 = \"C:\\\\Users\\\\oseem\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python311\\\\python.exe\"; if \\(Test-Path $py11\\) { & $py11 -m pytest \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\tests\" -x -q --tb=short 2>&1 | Select-Object -Last 50 })",
+      "PowerShell($gh = Get-Command gh.exe -ErrorAction SilentlyContinue; $gh.Source; & \"C:\\\\Users\\\\oseem\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python311\\\\Scripts\\\\pytest.exe\" --version 2>&1)",
+      "PowerShell(py -3 -m pytest \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\tests\" -x -q --tb=short 2>&1)",
+      "PowerShell($py13 = \"C:\\\\Python313\\\\python.exe\"; & $py13 -c \"import ruff\" 2>&1; & $py13 -m ruff check \"d:\\\\AI-Power-Blackout-Predictor\\\\backend\\\\app\" --select E,F,W --ignore E501 2>&1 | Select-Object -Last 30)"
+    ],
+    "additionalDirectories": [
+      "d:\\AI-Power-Blackout-Predictor\\frontend"
+    ]
+  }
+}

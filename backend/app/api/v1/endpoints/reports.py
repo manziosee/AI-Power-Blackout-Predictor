@@ -7,7 +7,7 @@ from app.models.outage import OutageReport
 from app.schemas.outage import OutageReportCreate, OutageReportOut
 from app.services.outage_service import resolve_h3_from_coords
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter(prefix="/reports", tags=["Reports"])
 
 
 @router.post("/public", response_model=OutageReportOut, status_code=201)

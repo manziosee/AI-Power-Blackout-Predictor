@@ -18,7 +18,7 @@ from app.models.alert import AlertSubscription
 from app.models.planned_outage import PlannedOutage
 from app.models.user import User
 
-router = APIRouter(tags=["Calendar"])
+router = APIRouter(tags=["Planned Outages"])
 
 _HMAC_LEN = 24
 

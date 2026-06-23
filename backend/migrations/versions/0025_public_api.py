@@ -58,10 +58,10 @@ def upgrade() -> None:
         sa.Column("status_code", sa.Integer(), nullable=True),
         sa.Column("response_time_ms", sa.Integer(), nullable=True),
         sa.Column("ip_address", sa.String(45), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("called_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_public_api_usage_key_id", "public_api_usage", ["api_key_id"])
-    op.create_index("ix_public_api_usage_created_at", "public_api_usage", ["created_at"])
+    op.create_index("ix_public_api_usage_called_at", "public_api_usage", ["called_at"])
 
 
 def downgrade() -> None:

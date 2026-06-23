@@ -13,20 +13,18 @@ from app.services.accuracy_service import compute_accuracy
 from app.services.duration_service import predict_duration
 from app.services.ranking_service import get_cell_rank, get_rankings
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 
 # ── 1. Outage Duration Predictor ──────────────────────────────────────────────
 
-@router.get("/duration/{h3_index}")
+@router.get("/duration/{h3_index}",
+            summary="Predict outage duration for a cell",
+            description="Returns estimated min/median/max duration in minutes plus a human-readable label (e.g. '2–4 hours').")
 async def get_duration_prediction(
     h3_index: str,
     country_code: str = Query(default="US"),
 ):
-    """Predict how long an outage will last at this H3 cell.
-
-    Returns: min/median/max duration in minutes + human-readable label.
-    """
     return await predict_duration(h3_index, country_code)
 
 
@@ -167,12 +165,13 @@ async def _fetch_parallel(h3_index: str, country_code: str):
 
 # ── 6. Utility Response Time Benchmarking (Feature 9) ────────────────────────
 
-@router.get("/utility-response-times")
+@router.get("/utility-response-times",
+            summary="Utility response-time leaderboard",
+            description="Ranks utilities by average and median MTTR (minutes from confirmed outage to power restored) over the requested period.")
 async def utility_response_times(
     days: int = Query(default=30, ge=7, le=180),
     db: AsyncSession = Depends(get_db),
 ):
-    """Per-utility avg/median response time from verified outage to power restored."""
     from app.models.enterprise import UtilityCompany
     from app.models.restoration import RestorationEvent
 
@@ -233,13 +232,14 @@ async def utility_response_times(
 
 # ── 7. Weather Correlation Dashboard (Feature 10) ────────────────────────────
 
-@router.get("/weather-correlation/{h3_index}")
+@router.get("/weather-correlation/{h3_index}",
+            summary="Weather-outage correlation for a cell",
+            description="Compares wind speed, rainfall, temperature and humidity during verified outages vs baseline periods to surface the strongest weather correlators.")
 async def weather_correlation(
     h3_index: str,
     days: int = Query(default=90, ge=14, le=365),
     db: AsyncSession = Depends(get_db),
 ):
-    """Show which weather conditions most correlate with outages at this cell."""
     from app.models.weather import WeatherSnapshot
 
     since = datetime.now(timezone.utc) - timedelta(days=days)

@@ -17,12 +17,12 @@ from app.services.admin_service import (
     get_smpp_connectors,
 )
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # ── Platform stats ─────────────────────────────────────────────────────────────
 
-@router.get("/stats")
+@router.get("/stats", summary="Platform-wide KPIs and user/report totals")
 async def platform_stats(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
@@ -32,7 +32,7 @@ async def platform_stats(
 
 # ── Prediction accuracy by country ────────────────────────────────────────────
 
-@router.get("/accuracy")
+@router.get("/accuracy", summary="Model prediction accuracy broken down by country")
 async def accuracy_by_country(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
@@ -42,14 +42,14 @@ async def accuracy_by_country(
 
 # ── SMPP connector health ──────────────────────────────────────────────────────
 
-@router.get("/smpp-status")
+@router.get("/smpp-status", summary="Jasmin SMPP connector health")
 async def smpp_status(_admin: User = Depends(require_admin)):
     return {"connectors": get_smpp_connectors()}
 
 
 # ── Celery worker health ───────────────────────────────────────────────────────
 
-@router.get("/celery-health")
+@router.get("/celery-health", summary="Celery worker queue health check")
 async def celery_health(_admin: User = Depends(require_admin)):
     return get_celery_health()
 
@@ -151,7 +151,9 @@ async def toggle_admin(
 
 # ── Dead-letter SMS queue (Feature 17) ────────────────────────────────────────
 
-@router.get("/alerts/failed")
+@router.get("/alerts/failed",
+            summary="Dead-letter SMS queue — failed and dead alerts",
+            description="Lists SMS alerts with status `failed` or `dead` for manual review and retry. Pass `status=all` to see both.")
 async def list_failed_alerts(
     status: str = "failed",
     limit: int = 50,
@@ -182,7 +184,9 @@ async def list_failed_alerts(
     ]
 
 
-@router.post("/alerts/{alert_id}/retry")
+@router.post("/alerts/{alert_id}/retry",
+             summary="Force-retry a failed SMS alert",
+             description="Resets retry_count to 0 and next_retry_at to now so the sms_retry worker picks it up on its next 5-minute run.")
 async def force_retry_alert(
     alert_id: uuid.UUID,
     _admin: User = Depends(require_admin),
@@ -202,7 +206,9 @@ async def force_retry_alert(
 
 # ── Model drift report (Feature 18) ───────────────────────────────────────────
 
-@router.get("/model/drift-report")
+@router.get("/model/drift-report",
+            summary="ML model drift report",
+            description="Reads the latest JSONL feedback files and returns a breakdown of healthy/degraded/critical cells plus the worst 10 cells by accuracy drop.")
 async def model_drift_report(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),

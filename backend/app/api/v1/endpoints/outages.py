@@ -14,10 +14,12 @@ from app.models.user import User
 from app.schemas.outage import OutageReportCreate, OutageReportOut, OutageResolve
 from app.services.outage_service import resolve_h3_from_coords
 
-router = APIRouter(prefix="/outages", tags=["outages"])
+router = APIRouter(prefix="/outages", tags=["Outage Reports"])
 
 
-@router.post("/report", response_model=OutageReportOut, status_code=status.HTTP_201_CREATED)
+@router.post("/report", response_model=OutageReportOut, status_code=status.HTTP_201_CREATED,
+             summary="Submit a new outage report",
+             description="Report a power outage at a given H3 cell or lat/lng coordinate. Awards gamification points and triggers neighbor alerts.")
 async def report_outage(
     payload: OutageReportCreate,
     current_user: User = Depends(get_current_user),
@@ -53,7 +55,8 @@ async def report_outage(
     return report
 
 
-@router.get("/cell/{h3_index}", response_model=List[OutageReportOut])
+@router.get("/cell/{h3_index}", response_model=List[OutageReportOut],
+            summary="List recent outage reports for a cell")
 async def get_cell_outages(h3_index: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(OutageReport)
@@ -64,9 +67,10 @@ async def get_cell_outages(h3_index: str, db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-@router.get("/cell/{h3_index}/neighbor-stats")
+@router.get("/cell/{h3_index}/neighbor-stats",
+            summary="Social-proof stats for a cell and its neighbors",
+            description="Returns report counts for the given cell and its immediate H3 neighbors in the last hour — used to show 'X people nearby reported an outage'.")
 async def get_neighbor_stats(h3_index: str, db: AsyncSession = Depends(get_db)):
-    """Social proof — count recent outage reports in this cell and its immediate neighbors."""
     import h3 as _h3
     from sqlalchemy import func as sqlfunc
 
@@ -100,7 +104,8 @@ async def get_neighbor_stats(h3_index: str, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.patch("/{report_id}/resolve", response_model=OutageReportOut)
+@router.patch("/{report_id}/resolve", response_model=OutageReportOut,
+              summary="Mark your outage as resolved")
 async def resolve_outage(
     report_id: uuid.UUID,
     payload: OutageResolve,
@@ -135,7 +140,9 @@ class TimelineOut(BaseModel):
     events: list[TimelineEventOut]
 
 
-@router.get("/{report_id}/timeline", response_model=TimelineOut)
+@router.get("/{report_id}/timeline", response_model=TimelineOut,
+            summary="Step-by-step timeline for an outage report",
+            description="Returns ordered milestones: reported → confirmed → utility notified → crew assigned → crew on-site → restored.")
 async def get_outage_timeline(report_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     from app.services.timeline_service import build_timeline
     events = await build_timeline(report_id, db)
@@ -149,7 +156,9 @@ async def get_outage_timeline(report_id: uuid.UUID, db: AsyncSession = Depends(g
     )
 
 
-@router.post("/{report_id}/confirm", response_model=OutageReportOut)
+@router.post("/{report_id}/confirm", response_model=OutageReportOut,
+             summary="Confirm another user's outage report",
+             description="Trust-weighted confirmation. A report auto-verifies when its weighted score reaches 3.0 (equivalent to 3 average-trust confirmers), triggering instant SMS/push alerts.")
 async def confirm_outage(
     report_id: uuid.UUID,
     _: User = Depends(get_current_user),

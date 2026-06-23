@@ -821,10 +821,10 @@ CREATE TABLE IF NOT EXISTS public_api_usage (
     status_code      INTEGER,
     response_time_ms INTEGER,
     ip_address       VARCHAR(45),
-    created_at       TIMESTAMPTZ DEFAULT NOW()
+    called_at        TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS ix_public_api_usage_key_id ON public_api_usage (api_key_id);
-CREATE INDEX IF NOT EXISTS ix_public_api_usage_created_at ON public_api_usage (created_at);
+CREATE INDEX IF NOT EXISTS ix_public_api_usage_called_at ON public_api_usage (called_at);
 
 -- ════════════════════════════════════════════════════════════
 --  0026 — GNN predictions
@@ -886,10 +886,83 @@ ALTER TABLE outage_reports
     ADD COLUMN IF NOT EXISTS weighted_verification_score FLOAT NOT NULL DEFAULT 0;
 
 -- ════════════════════════════════════════════════════════════
---  Mark alembic as fully migrated to revision 0029
+--  0030 — confirmed_at on outage_reports (timeline feature)
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE outage_reports
+    ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+
+-- ════════════════════════════════════════════════════════════
+--  0031 — location_type + display_order on user_locations
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE user_locations
+    ADD COLUMN IF NOT EXISTS location_type  VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS display_order  INTEGER NOT NULL DEFAULT 0;
+
+-- ════════════════════════════════════════════════════════════
+--  0032 — quiet_risk_override on alert_subscriptions
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE alert_subscriptions
+    ADD COLUMN IF NOT EXISTS quiet_risk_override VARCHAR(20);
+
+-- ════════════════════════════════════════════════════════════
+--  0033 — outage_incidents table + incident_id on outage_reports
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS outage_incidents (
+    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    started_at          TIMESTAMPTZ NOT NULL,
+    ended_at            TIMESTAMPTZ,
+    h3_cells            JSONB       NOT NULL DEFAULT '[]',
+    root_cause_estimate VARCHAR(50),
+    status              VARCHAR(20) NOT NULL DEFAULT 'active',
+    report_count        INTEGER     NOT NULL DEFAULT 0,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_outage_incidents_status     ON outage_incidents(status);
+CREATE INDEX IF NOT EXISTS ix_outage_incidents_started_at ON outage_incidents(started_at);
+
+ALTER TABLE outage_reports
+    ADD COLUMN IF NOT EXISTS incident_id UUID REFERENCES outage_incidents(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS ix_outage_reports_incident_id ON outage_reports(incident_id);
+
+-- ════════════════════════════════════════════════════════════
+--  0034 — sms_alerts retry + template fields
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE sms_alerts
+    ADD COLUMN IF NOT EXISTS template_key  VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS template_vars JSONB,
+    ADD COLUMN IF NOT EXISTS retry_count   INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS ix_sms_alerts_retry ON sms_alerts(status, next_retry_at)
+    WHERE status IN ('failed', 'dead');
+
+-- ════════════════════════════════════════════════════════════
+--  PostGIS spatial_ref_sys — RLS (Supabase security advisor)
+-- ════════════════════════════════════════════════════════════
+-- PostGIS owns this table; we only need a read policy so the
+-- Supabase security advisor stops flagging it as CRITICAL.
+
+ALTER TABLE public.spatial_ref_sys ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "spatial_ref_sys_select" ON public.spatial_ref_sys;
+CREATE POLICY "spatial_ref_sys_select"
+    ON public.spatial_ref_sys
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+-- ════════════════════════════════════════════════════════════
+--  Mark alembic as fully migrated to revision 0034
 -- ════════════════════════════════════════════════════════════
 
 DELETE FROM alembic_version;
 INSERT INTO alembic_version (version_num)
-VALUES ('0029')
+VALUES ('0034')
 ON CONFLICT DO NOTHING;

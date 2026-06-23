@@ -13,7 +13,7 @@ from app.services.telegram_service import (
     send_outage_alert,
 )
 
-router = APIRouter(prefix="/telegram", tags=["telegram"])
+router = APIRouter(prefix="/telegram", tags=["Telegram"])
 log = logging.getLogger(__name__)
 
 WELCOME_TEXT = (

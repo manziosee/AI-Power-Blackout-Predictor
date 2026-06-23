@@ -8,7 +8,7 @@ from app.models.push import PushSubscription
 from app.models.user import User
 from app.schemas.push import PushSubscriptionCreate, PushSubscriptionOut
 
-router = APIRouter(prefix="/push", tags=["push"])
+router = APIRouter(prefix="/push", tags=["Push Notifications"])
 
 
 @router.post("/subscribe", response_model=PushSubscriptionOut, status_code=201)

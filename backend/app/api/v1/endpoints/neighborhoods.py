@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.models.neighborhood import H3Cell
 from app.schemas.prediction import HeatmapCell
 
-router = APIRouter(prefix="/neighborhoods", tags=["neighborhoods"])
+router = APIRouter(prefix="/neighborhoods", tags=["Neighborhoods"])
 
 
 @router.get("/cell/{h3_index}")

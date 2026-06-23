@@ -13,7 +13,7 @@ from app.models.user import User
 from app.models.weather import WeatherSnapshot
 from app.services.groq_service import explain_prediction, summarize_outage_history
 
-router = APIRouter(prefix="/insights", tags=["insights"])
+router = APIRouter(prefix="/insights", tags=["Insights"])
 
 
 @router.get("/prediction/{h3_index}")

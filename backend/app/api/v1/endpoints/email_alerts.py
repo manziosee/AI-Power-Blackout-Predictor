@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.models.notifications import EmailSubscription
 from app.models.user import User
 
-router = APIRouter(prefix="/email", tags=["email"])
+router = APIRouter(prefix="/email", tags=["Email Alerts"])
 
 
 class EmailSubscribeRequest(BaseModel):

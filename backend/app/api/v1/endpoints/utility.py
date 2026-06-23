@@ -12,7 +12,7 @@ from app.models.enterprise import UtilityCompany
 from app.models.outage import OutageReport
 from app.models.prediction import Prediction
 
-router = APIRouter(prefix="/utility", tags=["utility"])
+router = APIRouter(prefix="/utility", tags=["Utility Portal"])
 log = logging.getLogger(__name__)
 
 

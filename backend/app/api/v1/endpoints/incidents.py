@@ -26,7 +26,9 @@ class IncidentOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-@router.get("/active", response_model=list[IncidentOut])
+@router.get("/active", response_model=list[IncidentOut],
+            summary="List all currently active outage incidents",
+            description="Returns incidents that were auto-clustered from concurrent outage reports in adjacent H3 cells. Incidents close automatically when constituent reports are resolved.")
 async def list_active_incidents(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(OutageIncident)
@@ -37,7 +39,7 @@ async def list_active_incidents(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-@router.get("/{incident_id}", response_model=IncidentOut)
+@router.get("/{incident_id}", response_model=IncidentOut, summary="Get incident details")
 async def get_incident(incident_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(OutageIncident).where(OutageIncident.id == incident_id))
     incident = result.scalar_one_or_none()
@@ -46,7 +48,8 @@ async def get_incident(incident_id: uuid.UUID, db: AsyncSession = Depends(get_db
     return incident
 
 
-@router.get("/{incident_id}/reports")
+@router.get("/{incident_id}/reports",
+            summary="List individual outage reports that make up an incident")
 async def get_incident_reports(incident_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     incident = (await db.execute(select(OutageIncident).where(OutageIncident.id == incident_id))).scalar_one_or_none()
     if not incident:

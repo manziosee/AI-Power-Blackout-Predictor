@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.services.sms_inbound_service import process_inbound_sms
 
-router = APIRouter(prefix="/sms-inbound", tags=["sms-inbound"])
+router = APIRouter(prefix="/sms-inbound", tags=["SMS Inbound"])
 logger = logging.getLogger(__name__)
 
 

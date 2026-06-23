@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.models.enterprise import WebhookEvent, WebhookSubscription
 from app.models.user import User
 
-router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
 SUPPORTED_EVENTS = ["prediction_threshold", "outage_confirmed", "outage_resolved"]
 

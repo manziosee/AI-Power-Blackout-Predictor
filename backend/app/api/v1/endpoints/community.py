@@ -18,7 +18,7 @@ from app.services.gamification_service import (
     get_user_stats,
 )
 
-router = APIRouter(prefix="/community", tags=["community"])
+router = APIRouter(prefix="/community", tags=["Community"])
 
 NoteBody = Annotated[str, StringConstraints(min_length=1, max_length=280)]
 

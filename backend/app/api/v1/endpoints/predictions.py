@@ -10,17 +10,18 @@ from app.models.prediction import Prediction
 from app.models.user import User
 from app.schemas.prediction import HeatmapCell, PredictionOut
 
-router = APIRouter(prefix="/predictions", tags=["predictions"])
+router = APIRouter(prefix="/predictions", tags=["Predictions"])
 
 
-@router.get("/", response_model=List[PredictionOut])
+@router.get("/", response_model=List[PredictionOut],
+            summary="Latest predictions for an H3 cell",
+            description="Returns the most recent ML outage-probability forecasts for the given cell. Requires Bearer token authentication.")
 async def list_predictions(
     h3_index: str = Query(..., description="H3 cell index"),
     limit: int = Query(default=6, le=24),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List predictions for an H3 cell. Requires authentication."""
     result = await db.execute(
         select(Prediction)
         .where(Prediction.h3_index == h3_index)
@@ -30,7 +31,8 @@ async def list_predictions(
     return result.scalars().all()
 
 
-@router.get("/cell/{h3_index}", response_model=List[PredictionOut])
+@router.get("/cell/{h3_index}", response_model=List[PredictionOut],
+            summary="Latest predictions for a cell (public)")
 async def get_predictions_for_cell(
     h3_index: str,
     limit: int = Query(default=6, le=24),
@@ -45,12 +47,13 @@ async def get_predictions_for_cell(
     return result.scalars().all()
 
 
-@router.get("/heatmap", response_model=List[HeatmapCell])
+@router.get("/heatmap", response_model=List[HeatmapCell],
+            summary="Risk heatmap for a country",
+            description="Returns the latest prediction per H3 cell for an entire country. Used to render the risk heatmap overlay on the map.")
 async def get_heatmap(
     country_code: str = Query(..., description="ISO country code e.g. RW, US, FR"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return latest prediction per H3 cell for a country (used to render the heatmap)."""
     from sqlalchemy import func, text
 
     # Latest prediction per h3_index via window function

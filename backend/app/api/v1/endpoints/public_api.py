@@ -35,7 +35,9 @@ async def _verify_api_key(
     return key
 
 
-@router.get("/outages")
+@router.get("/outages",
+            summary="Query verified outage reports",
+            description="Filter by country, H3 cell, and date range. Requires `X-API-Key` header. Rate-limited by tier.")
 async def public_outages(
     country_code: str | None = Query(None, max_length=3),
     h3_index: str | None = Query(None, max_length=15),
@@ -48,7 +50,9 @@ async def public_outages(
     return await get_public_outages(country_code, h3_index, date_from, date_to, limit, db)
 
 
-@router.get("/predictions/{h3_index}")
+@router.get("/predictions/{h3_index}",
+            summary="Get outage probability predictions for a cell",
+            description="Returns the latest ML predictions for an H3 cell. Requires `X-API-Key` header.")
 async def public_predictions(
     h3_index: str,
     limit: int = Query(50, ge=1, le=200),
@@ -58,7 +62,9 @@ async def public_predictions(
     return await get_public_predictions(h3_index, limit, db)
 
 
-@router.get("/stats/{country_code}")
+@router.get("/stats/{country_code}",
+            summary="Aggregate outage statistics for a country",
+            description="Returns total reports, verified outages, average duration, and top affected cells for the specified ISO country code.")
 async def public_aggregate_stats(
     country_code: str,
     db: AsyncSession = Depends(get_db),
@@ -73,7 +79,9 @@ class RegisterKeyRequest(BaseModel):
     tier: str = "ngo"
 
 
-@router.post("/keys/register")
+@router.post("/keys/register",
+             summary="Register for a public API key",
+             description="NGOs, utilities, and researchers can self-register for a rate-limited API key. The raw key is shown once — store it securely.")
 async def register_public_key(body: RegisterKeyRequest, db: AsyncSession = Depends(get_db)):
     raw_key, key_record = await register_key(body.organization, body.email, body.tier, db)
     await db.commit()
