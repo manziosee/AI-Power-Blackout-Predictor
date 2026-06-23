@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -62,6 +62,42 @@ async def get_cell_outages(h3_index: str, db: AsyncSession = Depends(get_db)):
         .limit(50)
     )
     return result.scalars().all()
+
+
+@router.get("/cell/{h3_index}/neighbor-stats")
+async def get_neighbor_stats(h3_index: str, db: AsyncSession = Depends(get_db)):
+    """Social proof — count recent outage reports in this cell and its immediate neighbors."""
+    import h3 as _h3
+    from sqlalchemy import func as sqlfunc
+
+    since = datetime.now(timezone.utc) - timedelta(hours=1)
+    nearby_cells = list(_h3.grid_disk(h3_index, 1))  # includes the center cell
+
+    counts = (await db.execute(
+        select(OutageReport.h3_index, sqlfunc.count().label("n"))
+        .where(OutageReport.h3_index.in_(nearby_cells), OutageReport.reported_at >= since)
+        .group_by(OutageReport.h3_index)
+    )).fetchall()
+
+    count_map = {r.h3_index: r.n for r in counts}
+    this_cell = count_map.get(h3_index, 0)
+    neighbor_total = sum(v for k, v in count_map.items() if k != h3_index)
+    total = this_cell + neighbor_total
+
+    if total == 0:
+        message = "No outages reported nearby in the last hour."
+    elif total == 1:
+        message = "1 person reported a power outage in the last hour."
+    else:
+        message = f"{total} people reported power outages nearby in the last hour."
+
+    return {
+        "h3_index": h3_index,
+        "reports_this_cell": this_cell,
+        "reports_nearby": neighbor_total,
+        "total_reports_last_hour": total,
+        "message": message,
+    }
 
 
 @router.patch("/{report_id}/resolve", response_model=OutageReportOut)

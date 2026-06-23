@@ -285,3 +285,121 @@ async def most_affected(
 def _cell_filter(company: UtilityCompany) -> list[str] | None:
     cells = company.service_area_h3_cells
     return cells if cells else None
+
+
+# ── Self-service portal: planned outages (Feature 13) ────────────────────────
+
+class PlannedOutageCreate(BaseModel):
+    h3_index: str
+    title: str
+    description: str | None = None
+    starts_at: datetime
+    ends_at: datetime
+
+
+@router.get("/portal/planned-outages")
+async def portal_list_planned_outages(
+    company: UtilityCompany = Depends(get_utility),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.planned_outage import PlannedOutage
+
+    base = _cell_filter(company)
+    q = (
+        select(PlannedOutage)
+        .where(PlannedOutage.utility_id == company.id)
+        .order_by(PlannedOutage.starts_at.desc())
+        .limit(200)
+    )
+    if base:
+        q = q.where(PlannedOutage.h3_index.in_(base))
+
+    rows = (await db.execute(q)).scalars().all()
+    return [
+        {
+            "id": str(r.id),
+            "h3_index": r.h3_index,
+            "title": r.title,
+            "description": r.description,
+            "starts_at": r.starts_at.isoformat(),
+            "ends_at": r.ends_at.isoformat(),
+            "status": r.status,
+        }
+        for r in rows
+    ]
+
+
+@router.post("/portal/planned-outages", status_code=201)
+async def portal_create_planned_outage(
+    payload: PlannedOutageCreate,
+    company: UtilityCompany = Depends(get_utility),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.planned_outage import PlannedOutage
+
+    if payload.ends_at <= payload.starts_at:
+        raise HTTPException(status_code=400, detail="ends_at must be after starts_at")
+
+    po = PlannedOutage(
+        h3_index=payload.h3_index,
+        utility_id=company.id,
+        title=payload.title,
+        description=payload.description,
+        starts_at=payload.starts_at,
+        ends_at=payload.ends_at,
+        source="utility_portal",
+    )
+    db.add(po)
+    await db.flush()
+    return {"id": str(po.id), "status": "scheduled", "title": po.title}
+
+
+# ── Self-service portal: response time metrics ────────────────────────────────
+
+@router.get("/portal/response-times")
+async def portal_response_times(
+    days: int = Query(default=30, ge=7, le=90),
+    company: UtilityCompany = Depends(get_utility),
+    db: AsyncSession = Depends(get_db),
+):
+    """MTTR (mean time to restore) and trend for this utility's service area."""
+    from app.models.restoration import RestorationEvent
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    base = _cell_filter(company)
+
+    q = (
+        select(RestorationEvent, OutageReport.confirmed_at, OutageReport.reported_at)
+        .join(OutageReport, OutageReport.id == RestorationEvent.outage_report_id)
+        .where(
+            RestorationEvent.utility_id == company.id,
+            RestorationEvent.status == "restored",
+            RestorationEvent.resolved_at.isnot(None),
+            OutageReport.reported_at >= since,
+        )
+    )
+    if base:
+        q = q.where(RestorationEvent.h3_index.in_(base))
+
+    rows = (await db.execute(q)).fetchall()
+    times = []
+    for evt, confirmed_at, reported_at in rows:
+        start = confirmed_at or reported_at
+        if evt.resolved_at and start:
+            minutes = (evt.resolved_at - start).total_seconds() / 60.0
+            if minutes >= 0:
+                times.append(minutes)
+
+    if not times:
+        return {"company": company.name, "period_days": days, "mttr_minutes": None, "resolved_count": 0}
+
+    times.sort()
+    n = len(times)
+    return {
+        "company": company.name,
+        "period_days": days,
+        "resolved_count": n,
+        "mttr_minutes": round(sum(times) / n, 1),
+        "median_minutes": round(times[n // 2], 1),
+        "p90_minutes": round(times[int(n * 0.9)], 1),
+    }
