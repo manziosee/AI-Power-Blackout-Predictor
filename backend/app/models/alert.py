@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text, Time, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, Time, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -44,5 +44,9 @@ class SmsAlert(Base):
     provider: Mapped[str | None] = mapped_column(String(30), nullable=True)
     smpp_message_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    template_key: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    template_vars: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="sms_alerts")

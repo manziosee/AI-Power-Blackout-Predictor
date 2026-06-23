@@ -2,12 +2,13 @@ import hashlib
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
+from app.core.rate_limit import enforce_rate_limit
 from app.models.public_api import PublicApiKey
 from app.services.public_api_service import (
     get_aggregate_stats,
@@ -19,12 +20,18 @@ from app.services.public_api_service import (
 router = APIRouter()
 
 
-async def _verify_api_key(x_api_key: str = Header(..., alias="X-API-Key"), db: AsyncSession = Depends(get_db)):
+async def _verify_api_key(
+    x_api_key: str = Header(..., alias="X-API-Key"),
+    db: AsyncSession = Depends(get_db),
+    response: Response = None,
+):
     key_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
     result = await db.execute(select(PublicApiKey).where(PublicApiKey.key_hash == key_hash, PublicApiKey.is_active))
     key = result.scalar_one_or_none()
     if not key:
         raise HTTPException(status_code=403, detail="Invalid or inactive API key")
+    if response is not None:
+        await enforce_rate_limit(str(key.id), key.rate_limit_per_minute, key.rate_limit_per_day, response)
     return key
 
 

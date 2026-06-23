@@ -147,3 +147,65 @@ async def toggle_admin(
     user.is_admin = not user.is_admin
     await db.commit()
     return {"user_id": str(user_id), "is_admin": user.is_admin}
+
+
+# ── Dead-letter SMS queue (Feature 17) ────────────────────────────────────────
+
+@router.get("/alerts/failed")
+async def list_failed_alerts(
+    status: str = "failed",
+    limit: int = 50,
+    offset: int = 0,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.alert import SmsAlert
+    rows = (await db.execute(
+        select(SmsAlert)
+        .where(SmsAlert.status.in_(["failed", "dead"]) if status == "all" else SmsAlert.status == status)
+        .order_by(SmsAlert.sent_at.desc())
+        .limit(limit).offset(offset)
+    )).scalars().all()
+    return [
+        {
+            "id": str(r.id),
+            "user_id": str(r.user_id) if r.user_id else None,
+            "phone": r.phone,
+            "status": r.status,
+            "retry_count": r.retry_count,
+            "next_retry_at": r.next_retry_at.isoformat() if r.next_retry_at else None,
+            "error_message": r.error_message,
+            "sent_at": r.sent_at.isoformat(),
+            "template_key": r.template_key,
+        }
+        for r in rows
+    ]
+
+
+@router.post("/alerts/{alert_id}/retry")
+async def force_retry_alert(
+    alert_id: uuid.UUID,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.alert import SmsAlert
+    sms = (await db.execute(select(SmsAlert).where(SmsAlert.id == alert_id))).scalar_one_or_none()
+    if not sms:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Alert not found")
+    sms.status = "failed"
+    sms.retry_count = 0
+    sms.next_retry_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"ok": True, "alert_id": str(alert_id), "queued_at": datetime.now(timezone.utc).isoformat()}
+
+
+# ── Model drift report (Feature 18) ───────────────────────────────────────────
+
+@router.get("/model/drift-report")
+async def model_drift_report(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.tasks.model_monitor import get_drift_report
+    return await get_drift_report(db)

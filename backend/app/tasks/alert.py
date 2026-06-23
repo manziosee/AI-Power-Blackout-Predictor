@@ -12,8 +12,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_BACKOFF_MINUTES = [1, 2, 4, 8]
 
-@celery_app.task(name="app.tasks.alert.dispatch_alerts")
+
+@celery_app.task(name="app.tasks.alert.dispatch_alerts", queue="sms")
 def dispatch_alerts():
     asyncio.run(_dispatch())
 
@@ -58,16 +60,18 @@ async def _dispatch():
                 continue
 
             if "sms" in (sub.channels or []):
+                t_key = "outage_warning"
+                t_vars = {
+                    "prob": f"{int(prediction.probability * 100)}%",
+                    "time": prediction.window_start.strftime("%H:%M"),
+                }
                 try:
                     await send_sms_alert(
                         phone=user.phone,
                         country_code=user.country_code,
                         language=user.language,
-                        template_key="outage_warning",
-                        template_vars={
-                            "prob": f"{int(prediction.probability * 100)}%",
-                            "time": prediction.window_start.strftime("%H:%M"),
-                        },
+                        template_key=t_key,
+                        template_vars=t_vars,
                     )
                     sms_log = SmsAlert(
                         user_id=user.id,
@@ -75,11 +79,27 @@ async def _dispatch():
                         message="alert_sent",
                         language=user.language,
                         prediction_id=prediction.id,
+                        template_key=t_key,
+                        template_vars=t_vars,
                         status="sent",
                     )
                     db.add(sms_log)
                 except Exception as exc:
                     logger.error(f"SMS alert failed for user {user.id}: {exc}")
+                    sms_log = SmsAlert(
+                        user_id=user.id,
+                        phone=user.phone,
+                        message="alert_failed",
+                        language=user.language,
+                        prediction_id=prediction.id,
+                        template_key=t_key,
+                        template_vars=t_vars,
+                        status="failed",
+                        error_message=str(exc)[:500],
+                        retry_count=0,
+                        next_retry_at=datetime.now(timezone.utc) + timedelta(minutes=_BACKOFF_MINUTES[0]),
+                    )
+                    db.add(sms_log)
 
         await db.commit()
 
