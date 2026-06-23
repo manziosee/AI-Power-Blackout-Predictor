@@ -41,6 +41,7 @@ frontend/.vite/
 Thumbs.db
 
 # IDE
+.claude/
 .vscode/
 .idea/
 *.swp

@@ -6,7 +6,7 @@ import time
 import uuid
 
 import redis.asyncio as aioredis
-from fastapi import HTTPException, Request, Response
+from fastapi import HTTPException, Response
 
 from app.core.config import settings
 
