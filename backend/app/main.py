@@ -122,7 +122,7 @@ app = FastAPI(
     description=_DESCRIPTION,
     contact={
         "name": "AI Power Blackout Predictor",
-        "email": "info@sicrwanda.com",
+        "email": "manziosee3@gmail.com",
     },
     license_info={
         "name": "MIT",

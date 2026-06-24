@@ -153,10 +153,4 @@ The backend uses `service_role` Postgres credentials that bypass Row Level Secur
 
 ---
 
-## Hacktoberfest
-
-This project participates in [Hacktoberfest](https://hacktoberfest.com/). PRs tagged `hacktoberfest-accepted` count toward your contribution goals.
-
----
-
-Questions? Open a [GitHub Discussion](https://github.com/manziosee/AI-Power-Blackout-Predictor/discussions) or email info@sicrwanda.com.
+Questions? Email manziosee3@gmail.com.
