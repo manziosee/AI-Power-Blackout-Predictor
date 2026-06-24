@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.ws_manager import manager as ws_manager
 from app.models.outage import OutageReport
 from app.models.user import User
 from app.schemas.outage import OutageReportCreate, OutageReportOut, OutageResolve
@@ -41,6 +42,14 @@ async def report_outage(
     )
     db.add(report)
     await db.flush()
+
+    # Broadcast to live WebSocket subscribers
+    await ws_manager.broadcast({
+        "event": "new_report",
+        "h3_index": h3_index,
+        "id": str(report.id),
+        "verified": report.verified,
+    })
 
     # Fraud check (non-blocking — flags written to session, committed with report)
     from app.services.fraud_service import check_report

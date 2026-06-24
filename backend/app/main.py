@@ -2,7 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
+from app.api.v1.endpoints.ws import router as ws_router
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.security_headers import SecurityHeadersMiddleware
@@ -28,6 +30,16 @@ crowd-sourced reports, weather data, and grid topology analysis.
 Public API keys are subject to sliding-window rate limits.
 Exceeded limits return **HTTP 429** with a `Retry-After` header.
 Current headroom is visible on `GET /public/me/analytics`.
+
+### Real-Time Feed
+
+Connect to `ws://<host>/ws/outages/live` (WebSocket) to receive live JSON events
+whenever a new outage is reported or a report reaches verified status.
+
+### Observability
+
+Prometheus metrics are available at `GET /metrics`.
+OpenTelemetry tracing can be enabled with `OTEL_ENABLED=true`.
 
 ### Key Feature Areas
 
@@ -86,11 +98,21 @@ _TAGS_METADATA = [
     {"name": "White Label", "description": "Per-utility branding configuration (logo, colours, sender ID)."},
     {"name": "Insights", "description": "AI-generated outage trend summaries and actionable insights."},
     {"name": "Admin", "description": "Internal admin panel — platform stats, user management, fraud flags, model drift. Requires admin JWT."},
+    {"name": "WebSocket", "description": "Real-time WebSocket event stream for live outage feed."},
 ]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.OTEL_ENABLED:
+        from opentelemetry import trace
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+        provider = TracerProvider()
+        provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+        trace.set_tracer_provider(provider)
+        FastAPIInstrumentor().instrument_app(app)
     yield
 
 
@@ -103,7 +125,7 @@ app = FastAPI(
         "email": "info@sicrwanda.com",
     },
     license_info={
-        "name": "Proprietary",
+        "name": "MIT",
     },
     docs_url="/docs",
     redoc_url="/redoc",
@@ -120,9 +142,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if settings.METRICS_ENABLED:
+    Instrumentator().instrument(app).expose(app, include_in_schema=False)
+
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(ws_router)
 
 
 @app.get("/health", tags=["Health"], summary="Service liveness check")
 async def health():
-    return {"status": "ok", "app": settings.APP_NAME}
+    from app.core.ws_manager import manager
+    return {
+        "status": "ok",
+        "app": settings.APP_NAME,
+        "ws_connections": manager.connection_count,
+    }

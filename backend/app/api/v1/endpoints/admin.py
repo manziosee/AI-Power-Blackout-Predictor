@@ -292,3 +292,65 @@ async def get_audit_log(
         }
         for r in rows
     ]
+
+
+@router.get("/audit-log/export",
+            summary="Export audit log as CSV or JSONL",
+            description="Download the admin audit log for SOC 2 / ISO 27001 compliance audits.")
+async def export_audit_log(
+    format: str = Query(default="csv", pattern="^(csv|jsonl)$", description="Output format"),
+    days: int = Query(default=30, ge=1, le=365),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    import csv
+    import io
+    import json as _json
+    from datetime import timedelta
+
+    from fastapi.responses import StreamingResponse
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    rows = (await db.execute(
+        select(AdminAuditLog)
+        .where(AdminAuditLog.created_at >= since)
+        .order_by(AdminAuditLog.created_at.asc())
+    )).scalars().all()
+
+    filename = f"audit-log-{days}d.{format}"
+
+    if format == "csv":
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["id", "admin_id", "action", "target_table", "target_id", "ip_address", "created_at"])
+        for r in rows:
+            writer.writerow([
+                str(r.id), str(r.admin_id) if r.admin_id else "",
+                r.action, r.target_table or "", r.target_id or "",
+                r.ip_address or "", r.created_at.isoformat(),
+            ])
+        buf.seek(0)
+        return StreamingResponse(
+            iter([buf.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    lines = [
+        _json.dumps({
+            "id": str(r.id),
+            "admin_id": str(r.admin_id) if r.admin_id else None,
+            "action": r.action,
+            "target_table": r.target_table,
+            "target_id": r.target_id,
+            "detail": r.detail,
+            "ip_address": r.ip_address,
+            "created_at": r.created_at.isoformat(),
+        })
+        for r in rows
+    ]
+    return StreamingResponse(
+        iter(["\n".join(lines)]),
+        media_type="application/x-ndjson",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )

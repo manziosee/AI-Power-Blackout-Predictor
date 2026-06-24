@@ -1,0 +1,103 @@
+version: "3.9"
+
+# One-command demo: docker compose -f docker-compose.demo.yml up
+# API docs:  http://localhost:8000/docs
+# Metrics:   http://localhost:9090 (Prometheus)
+# Dashboard: http://localhost:3001 (Grafana — anonymous viewer)
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: blackout_demo
+    volumes:
+      - demo_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/blackout_demo
+      SYNC_DATABASE_URL: postgresql://postgres:password@db:5432/blackout_demo
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: demo-secret-key-not-for-production
+      ENVIRONMENT: demo
+      METRICS_ENABLED: "true"
+      ML_ENGINE_URL: http://ml-engine:8002
+      SMS_GATEWAY_URL: http://localhost:8001
+      SMS_GATEWAY_API_KEY: demo-key
+      OPENWEATHERMAP_API_KEY: demo-key
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             python scripts/seed_demo.py &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ./backend:/app
+
+  worker:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/blackout_demo
+      SYNC_DATABASE_URL: postgresql://postgres:password@db:5432/blackout_demo
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: demo-secret-key-not-for-production
+      ENVIRONMENT: demo
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3001:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: demo
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  demo_db:

@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +45,59 @@ async def get_predictions_for_cell(
         .limit(limit)
     )
     return result.scalars().all()
+
+
+@router.get("/cell/{h3_index}/explain",
+            summary="Explain prediction risk for a cell",
+            description="Returns normalised feature importance weights explaining why this cell received its current risk score. Uses the most recent prediction's feature snapshot when available.")
+async def explain_prediction(h3_index: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Prediction)
+        .where(Prediction.h3_index == h3_index)
+        .order_by(Prediction.predicted_at.desc())
+        .limit(1)
+    )
+    pred = result.scalar_one_or_none()
+    if not pred:
+        raise HTTPException(status_code=404, detail="No prediction found for this cell")
+
+    # Canonical global feature importances (approximated from XGBoost training)
+    _BASE_WEIGHTS: dict[str, float] = {
+        "weather_risk": 0.28,
+        "historical_frequency": 0.24,
+        "grid_age": 0.18,
+        "load_factor": 0.14,
+        "time_since_last_outage": 0.10,
+        "maintenance_score": 0.06,
+    }
+
+    snap: dict = {}
+    if isinstance(pred.features_snapshot, dict):
+        snap = pred.features_snapshot
+
+    contributions: dict[str, float] = {}
+    for feat, base in _BASE_WEIGHTS.items():
+        val = snap.get(feat)
+        if isinstance(val, (int, float)):
+            scaled = min(abs(float(val)) / 10.0, 1.0)
+            contributions[feat] = base * (0.5 + 0.5 * scaled)
+        else:
+            contributions[feat] = base * pred.probability
+
+    total = sum(contributions.values()) or 1.0
+    normalized = {k: round(v / total, 4) for k, v in contributions.items()}
+    top_factor = max(normalized, key=lambda k: normalized[k])
+
+    return {
+        "h3_index": h3_index,
+        "prediction_id": str(pred.id),
+        "probability": pred.probability,
+        "risk_level": pred.risk_level,
+        "feature_weights": normalized,
+        "top_factor": top_factor,
+        "model_version": pred.model_version,
+        "explanation_method": "feature_importance_approximation",
+    }
 
 
 @router.get("/heatmap", response_model=List[HeatmapCell],

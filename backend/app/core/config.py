@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     # Groq AI (free LLM inference — llama3, mixtral)
     GROQ_API_KEY: str = ""
 
+    # Observability — set OTEL_ENABLED=true and point OTEL_ENDPOINT at your collector
+    OTEL_ENABLED: bool = False
+    OTEL_ENDPOINT: str = "http://localhost:4318"
+    METRICS_ENABLED: bool = True
+
     # Africa's Talking HTTP SMS API (no SMPP required)
     AFRICASTALKING_API_KEY: str = ""
     AFRICASTALKING_USERNAME: str = "sandbox"

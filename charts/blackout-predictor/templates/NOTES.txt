@@ -1,0 +1,36 @@
+AI Power Blackout Predictor has been deployed!
+
+  Release:   {{ .Release.Name }}
+  Namespace: {{ .Release.Namespace }}
+  Version:   {{ .Chart.AppVersion }}
+
+1. Get the application URL:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  https://{{ $host.host }}/docs     ← Swagger UI
+  https://{{ $host.host }}/health   ← Health check
+  https://{{ $host.host }}/metrics  ← Prometheus metrics
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "blackout-predictor.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "blackout-predictor.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP/docs
+{{- else if contains "ClusterIP" .Values.service.type }}
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "blackout-predictor.fullname" . }} 8000:80
+  echo "Open http://127.0.0.1:8000/docs"
+{{- end }}
+
+2. Provide required secrets (if not done yet):
+   kubectl create secret generic blackout-secrets \
+     --namespace {{ .Release.Namespace }} \
+     --from-literal=DATABASE_URL="postgresql+asyncpg://..." \
+     --from-literal=REDIS_URL="redis://..." \
+     --from-literal=SECRET_KEY="$(openssl rand -hex 32)"
+
+   Then set envFromSecret: blackout-secrets in your values.
+
+3. WebSocket live feed:
+   wss://{{ (index .Values.ingress.hosts 0).host }}/ws/outages/live

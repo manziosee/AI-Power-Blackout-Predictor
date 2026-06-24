@@ -1,0 +1,19 @@
+apiVersion: v2
+name: blackout-predictor
+description: AI-powered power outage prediction platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://github.com/manziosee/AI-Power-Blackout-Predictor
+sources:
+  - https://github.com/manziosee/AI-Power-Blackout-Predictor
+maintainers:
+  - name: AI Power Blackout Predictor Team
+    email: info@sicrwanda.com
+keywords:
+  - ai
+  - power
+  - outage
+  - prediction
+  - energy
+  - iot
