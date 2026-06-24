@@ -22,11 +22,19 @@ class UserOut(BaseModel):
     phone: str
     country_code: str
     language: str
+    display_name: str | None = None
     email: str | None
     is_active: bool
     created_at: datetime
+    updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class UserUpdate(BaseModel):
+    display_name: str | None = None
+    language: str | None = None
+    email: str | None = None
 
 
 class Token(BaseModel):

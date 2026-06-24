@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.models import *  # noqa: F401,F403 — ensure all models are registered
 
 _DESCRIPTION = """
@@ -110,6 +111,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,

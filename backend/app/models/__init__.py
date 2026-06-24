@@ -47,6 +47,7 @@ __all__ = [
     "GnnPrediction",
     "RestorationEvent",
     "OutageIncident",
+    "AdminAuditLog",
 ]
 
 from app.models.enterprise import UtilityCompany, BusinessProfile, WebhookSubscription, WebhookEvent
@@ -72,3 +73,4 @@ from app.models.public_api import PublicApiKey, PublicApiUsage
 from app.models.gnn_model import GnnPrediction
 from app.models.restoration import RestorationEvent
 from app.models.incident import OutageIncident
+from app.models.audit import AdminAuditLog

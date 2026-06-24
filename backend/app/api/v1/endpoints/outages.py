@@ -208,3 +208,80 @@ async def confirm_outage(
         await create_restoration_event(report.id, report.h3_index, None, db)
 
     return report
+
+
+# ── GeoJSON map feed ──────────────────────────────────────────────────────────
+
+@router.get("/map/geojson",
+            summary="GeoJSON FeatureCollection of active outage reports",
+            description="Returns a GeoJSON FeatureCollection of recent unresolved outage reports for map overlay rendering. Filter by country_code or bounding box.")
+async def outage_geojson(
+    country_code: str | None = None,
+    hours: int = 24,
+    lat_min: float | None = None,
+    lat_max: float | None = None,
+    lng_min: float | None = None,
+    lng_max: float | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+
+    q = (
+        select(OutageReport)
+        .where(
+            OutageReport.reported_at >= since,
+            OutageReport.resolved_at.is_(None),
+            OutageReport.lat.isnot(None),
+            OutageReport.lng.isnot(None),
+        )
+        .order_by(OutageReport.reported_at.desc())
+        .limit(2000)
+    )
+
+    if country_code:
+        from app.models.neighborhood import H3Cell
+        cells_in_country = (await db.execute(
+            select(H3Cell.h3_index).where(H3Cell.country_code == country_code.upper())
+        )).scalars().all()
+        if cells_in_country:
+            q = q.where(OutageReport.h3_index.in_(cells_in_country))
+
+    if lat_min is not None:
+        q = q.where(OutageReport.lat >= lat_min)
+    if lat_max is not None:
+        q = q.where(OutageReport.lat <= lat_max)
+    if lng_min is not None:
+        q = q.where(OutageReport.lng >= lng_min)
+    if lng_max is not None:
+        q = q.where(OutageReport.lng <= lng_max)
+
+    reports = (await db.execute(q)).scalars().all()
+
+    features = [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [float(r.lng), float(r.lat)],
+            },
+            "properties": {
+                "id": str(r.id),
+                "h3_index": r.h3_index,
+                "reported_at": r.reported_at.isoformat(),
+                "verified": r.verified,
+                "verification_count": r.verification_count,
+                "source": r.source,
+            },
+        }
+        for r in reports
+    ]
+
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "meta": {
+            "total": len(features),
+            "hours": hours,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    }

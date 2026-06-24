@@ -1,4 +1,4 @@
-"""Redis sliding-window rate limiter for the public API."""
+"""Redis sliding-window rate limiters — public API and auth endpoints."""
 from __future__ import annotations
 
 import logging
@@ -75,3 +75,58 @@ async def enforce_rate_limit(
         raise
     except Exception as exc:
         logger.warning(f"Rate limit Redis unavailable — allowing request: {exc}")
+
+
+# Per-IP limits for sensitive auth endpoints
+_AUTH_MINUTE_LIMIT = 10   # max 10 attempts per minute per IP
+_AUTH_HOUR_LIMIT = 30     # max 30 attempts per hour per IP
+_HOUR_MS = 3_600_000
+
+
+async def enforce_auth_rate_limit(client_ip: str) -> None:
+    """Brute-force protection for register/login/OTP endpoints.
+
+    Raises HTTP 429 after 10 attempts/minute or 30 attempts/hour from the same IP.
+    Fail-open when Redis is unavailable.
+    """
+    now_ms = int(time.time() * 1000)
+    member = f"{now_ms}:{uuid.uuid4().hex[:8]}"
+
+    try:
+        async with aioredis.from_url(settings.REDIS_URL, socket_connect_timeout=1) as r:
+            pipe = r.pipeline()
+
+            min_key = f"auth:min:{client_ip}"
+            pipe.zadd(min_key, {member: now_ms})
+            pipe.zremrangebyscore(min_key, 0, now_ms - _MINUTE_MS)
+            pipe.zcard(min_key)
+            pipe.expire(min_key, 60)
+
+            hour_key = f"auth:hour:{client_ip}"
+            pipe.zadd(hour_key, {member + "h": now_ms})
+            pipe.zremrangebyscore(hour_key, 0, now_ms - _HOUR_MS)
+            pipe.zcard(hour_key)
+            pipe.expire(hour_key, 3600)
+
+            results = await pipe.execute()
+
+        min_count: int = results[2]
+        hour_count: int = results[6]
+
+        if min_count > _AUTH_MINUTE_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many authentication attempts. Try again in 60 seconds.",
+                headers={"Retry-After": "60"},
+            )
+        if hour_count > _AUTH_HOUR_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many authentication attempts. Try again in 1 hour.",
+                headers={"Retry-After": "3600"},
+            )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning(f"Auth rate limit Redis unavailable — allowing request: {exc}")

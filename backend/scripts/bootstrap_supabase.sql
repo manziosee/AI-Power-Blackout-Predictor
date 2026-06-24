@@ -959,10 +959,44 @@ CREATE POLICY "spatial_ref_sys_select"
     USING (true);
 
 -- ════════════════════════════════════════════════════════════
---  Mark alembic as fully migrated to revision 0034
+--  0035 — display_name + updated_at on users
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS display_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS updated_at   TIMESTAMPTZ DEFAULT NOW();
+
+-- ════════════════════════════════════════════════════════════
+--  0036 — OTP fields for SMS password reset
+-- ════════════════════════════════════════════════════════════
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS otp_code_hash  VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS otp_expires_at TIMESTAMPTZ;
+
+-- ════════════════════════════════════════════════════════════
+--  0037 — admin audit log table
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id     UUID        REFERENCES users(id) ON DELETE SET NULL,
+    action       VARCHAR(80) NOT NULL,
+    target_table VARCHAR(60),
+    target_id    VARCHAR(80),
+    detail       JSONB,
+    ip_address   VARCHAR(45),
+    created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_admin_audit_logs_admin_id   ON admin_audit_logs(admin_id);
+CREATE INDEX IF NOT EXISTS ix_admin_audit_logs_created_at ON admin_audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS ix_admin_audit_logs_action     ON admin_audit_logs(action);
+
+-- ════════════════════════════════════════════════════════════
+--  Mark alembic as fully migrated to revision 0037
 -- ════════════════════════════════════════════════════════════
 
 DELETE FROM alembic_version;
 INSERT INTO alembic_version (version_num)
-VALUES ('0034')
+VALUES ('0037')
 ON CONFLICT DO NOTHING;

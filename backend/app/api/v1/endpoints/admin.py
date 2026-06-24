@@ -1,13 +1,14 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_admin
 from app.core.database import get_db
+from app.models.audit import AdminAuditLog
 from app.models.fraud import FraudFlag
 from app.models.user import User
 from app.services.admin_service import (
@@ -18,6 +19,29 @@ from app.services.admin_service import (
 )
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+async def _audit(
+    db: AsyncSession,
+    admin: User,
+    action: str,
+    request: Request | None = None,
+    target_table: str | None = None,
+    target_id: str | None = None,
+    detail: dict | None = None,
+) -> None:
+    ip = None
+    if request:
+        forwarded = request.headers.get("X-Forwarded-For")
+        ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else None)
+    db.add(AdminAuditLog(
+        admin_id=admin.id,
+        action=action,
+        target_table=target_table,
+        target_id=str(target_id) if target_id else None,
+        detail=detail,
+        ip_address=ip,
+    ))
 
 
 # ── Platform stats ─────────────────────────────────────────────────────────────
@@ -77,6 +101,7 @@ class ResolveFlagBody(BaseModel):
 async def resolve_flag(
     flag_id: uuid.UUID,
     body: ResolveFlagBody,
+    request: Request,
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -85,6 +110,8 @@ async def resolve_flag(
         .where(FraudFlag.id == flag_id)
         .values(resolved=True, resolved_by=admin.id, resolved_at=datetime.now(timezone.utc))
     )
+    await _audit(db, admin, "resolve_fraud_flag", request, "fraud_flags", str(flag_id),
+                 {"note": body.note})
     await db.commit()
     return {"ok": True}
 
@@ -120,15 +147,18 @@ async def list_users(
 @router.patch("/users/{user_id}/ban")
 async def toggle_ban(
     user_id: uuid.UUID,
-    _admin: User = Depends(require_admin),
+    request: Request,
+    admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    from fastapi import HTTPException
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="User not found")
     user.is_active = not user.is_active
+    await _audit(db, admin, "toggle_ban", request, "users", str(user_id),
+                 {"is_active": user.is_active})
     await db.commit()
     return {"user_id": str(user_id), "is_active": user.is_active}
 
@@ -136,15 +166,18 @@ async def toggle_ban(
 @router.patch("/users/{user_id}/make-admin")
 async def toggle_admin(
     user_id: uuid.UUID,
-    _admin: User = Depends(require_admin),
+    request: Request,
+    admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    from fastapi import HTTPException
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="User not found")
     user.is_admin = not user.is_admin
+    await _audit(db, admin, "toggle_admin", request, "users", str(user_id),
+                 {"is_admin": user.is_admin})
     await db.commit()
     return {"user_id": str(user_id), "is_admin": user.is_admin}
 
@@ -215,3 +248,47 @@ async def model_drift_report(
 ):
     from app.tasks.model_monitor import get_drift_report
     return await get_drift_report(db)
+
+
+# ── Admin Audit Log ───────────────────────────────────────────────────────────
+
+@router.get("/audit-log",
+            summary="Admin action audit log",
+            description="Immutable log of all admin actions: bans, role changes, fraud flag resolutions, alert retries, etc.")
+async def get_audit_log(
+    action: str | None = Query(None, description="Filter by action name e.g. toggle_ban"),
+    admin_id: uuid.UUID | None = Query(None),
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from datetime import timedelta
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    q = (
+        select(AdminAuditLog)
+        .where(AdminAuditLog.created_at >= since)
+        .order_by(AdminAuditLog.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    if action:
+        q = q.where(AdminAuditLog.action == action)
+    if admin_id:
+        q = q.where(AdminAuditLog.admin_id == admin_id)
+
+    rows = (await db.execute(q)).scalars().all()
+    return [
+        {
+            "id": str(r.id),
+            "admin_id": str(r.admin_id) if r.admin_id else None,
+            "action": r.action,
+            "target_table": r.target_table,
+            "target_id": r.target_id,
+            "detail": r.detail,
+            "ip_address": r.ip_address,
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in rows
+    ]
