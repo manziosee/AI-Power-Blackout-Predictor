@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package blackout;
+
+option java_package = "com.blackoutpredictor.grpc";
+option java_outer_classname = "BlackoutProto";
+
+// ── Prediction ──────────────────────────────────────────────────────────────
+
+service PredictionService {
+  rpc GetPrediction (PredictionRequest) returns (PredictionResponse);
+  rpc StreamPredictions (StreamRequest) returns (stream PredictionResponse);
+}
+
+message PredictionRequest {
+  string h3_index = 1;
+}
+
+message PredictionResponse {
+  string h3_index = 1;
+  double probability = 2;
+  string risk_level = 3;
+  string window_start = 4;
+  string window_end = 5;
+  string model_version = 6;
+}
+
+message StreamRequest {
+  repeated string h3_indexes = 1;
+}
+
+// ── Outage reporting ─────────────────────────────────────────────────────────
+
+service OutageService {
+  rpc ReportOutage (OutageReportRequest) returns (OutageReportResponse);
+  rpc GetRecentOutages (RecentOutagesRequest) returns (RecentOutagesResponse);
+}
+
+message OutageReportRequest {
+  string h3_index = 1;
+  string reporter_id = 2;
+  string description = 3;
+}
+
+message OutageReportResponse {
+  string id = 1;
+  bool accepted = 2;
+}
+
+message RecentOutagesRequest {
+  string h3_index = 1;
+  int32 limit = 2;
+}
+
+message OutageReport {
+  string id = 1;
+  string h3_index = 2;
+  bool verified = 3;
+  string created_at = 4;
+}
+
+message RecentOutagesResponse {
+  repeated OutageReport reports = 1;
+}
+
+// ── Grid load (SCADA integration) ─────────────────────────────────────────────
+
+service GridLoadService {
+  rpc PushSnapshot (GridSnapshot) returns (SnapshotAck);
+}
+
+message GridSnapshot {
+  string region = 1;
+  string source = 2;
+  double load_mw = 3;
+  double capacity_mw = 4;
+  double load_pct = 5;
+  double renewable_pct = 6;
+  string recorded_at = 7;
+}
+
+message SnapshotAck {
+  bool accepted = 1;
+  string id = 2;
+}

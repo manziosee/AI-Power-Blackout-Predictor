@@ -48,6 +48,9 @@ __all__ = [
     "RestorationEvent",
     "OutageIncident",
     "AdminAuditLog",
+    "Organization",
+    "SsoAccount",
+    "UptimeCheck",
 ]
 
 from app.models.enterprise import UtilityCompany, BusinessProfile, WebhookSubscription, WebhookEvent
@@ -74,3 +77,6 @@ from app.models.gnn_model import GnnPrediction
 from app.models.restoration import RestorationEvent
 from app.models.incident import OutageIncident
 from app.models.audit import AdminAuditLog
+from app.models.organization import Organization
+from app.models.sso import SsoAccount
+from app.models.uptime import UptimeCheck

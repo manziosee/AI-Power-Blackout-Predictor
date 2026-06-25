@@ -1,0 +1,33 @@
+{
+  "name": "blackout-predictor-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the AI Power Blackout Predictor API",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "lint": "eslint src/"
+  },
+  "files": ["dist"],
+  "keywords": ["blackout", "power", "outage", "prediction", "electricity", "sdk"],
+  "license": "MIT",
+  "author": "AI Power Blackout Predictor <manziosee3@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/manziosee/AI-Power-Blackout-Predictor"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

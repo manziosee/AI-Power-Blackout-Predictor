@@ -4,9 +4,12 @@ from app.api.v1.endpoints import (
     admin,
     alerts,
     analytics,
+    anomaly,
+    assistant,
     billing,
     business,
     calendar,
+    carbon,
     community,
     data_marketplace,
     dispatch,
@@ -22,6 +25,7 @@ from app.api.v1.endpoints import (
     maintenance,
     medical_priority,
     neighborhoods,
+    orgs,
     outages,
     planned_outages,
     poi,
@@ -34,12 +38,15 @@ from app.api.v1.endpoints import (
     resilience,
     restoration,
     seasonal,
+    sla,
     sms_inbound,
+    sso,
     telegram,
     transfer_learning,
     users,
     ussd,
     utility,
+    weather,
     webhooks,
     white_label,
     whatsapp,
@@ -92,3 +99,10 @@ api_router.include_router(public_api.router,        prefix="/public",           
 api_router.include_router(gnn.router,               prefix="/gnn",               tags=["GNN Predictions"])
 api_router.include_router(restoration.router,       prefix="/restoration",       tags=["Restoration"])
 api_router.include_router(maintenance.router,       prefix="/maintenance",       tags=["Maintenance"])
+api_router.include_router(assistant.router)
+api_router.include_router(anomaly.router)
+api_router.include_router(carbon.router)
+api_router.include_router(weather.router)
+api_router.include_router(sla.router)
+api_router.include_router(sso.router)
+api_router.include_router(orgs.router)
