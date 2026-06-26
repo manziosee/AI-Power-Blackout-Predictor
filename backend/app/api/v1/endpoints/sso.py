@@ -53,7 +53,7 @@ async def google_callback(
         client_secret=settings.GOOGLE_CLIENT_SECRET,
         redirect_uri=_redirect_uri("google"),
     )
-    token = await client.fetch_token(_GOOGLE_TOKEN_URL, code=code)
+    await client.fetch_token(_GOOGLE_TOKEN_URL, code=code)
     userinfo_resp = await client.get(_GOOGLE_USERINFO_URL)
     userinfo = userinfo_resp.json()
     return await _upsert_sso_user(db, "google", userinfo["sub"], userinfo.get("email"))
