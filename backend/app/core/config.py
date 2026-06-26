@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     OTEL_ENDPOINT: str = "http://localhost:4318"
     METRICS_ENABLED: bool = True
 
+    # Enterprise SSO (Google / Microsoft OAuth2)
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    MICROSOFT_CLIENT_ID: str = ""
+    MICROSOFT_CLIENT_SECRET: str = ""
+    SSO_REDIRECT_URI: str = "http://localhost:8000/api/v1/sso/callback"
+
     # Africa's Talking HTTP SMS API (no SMPP required)
     AFRICASTALKING_API_KEY: str = ""
     AFRICASTALKING_USERNAME: str = "sandbox"
