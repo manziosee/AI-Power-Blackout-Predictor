@@ -34,6 +34,7 @@ celery_app = Celery(
         "app.tasks.resilience_compute",
         "app.tasks.grid_load_fetch",
         "app.tasks.push_alert",
+        "app.tasks.weather_sync",
     ],
 )
 
@@ -58,6 +59,7 @@ celery_app.conf.task_routes = {
     # Analytics — low-priority batch work
     "app.tasks.analytics_refresh.*": {"queue": "analytics"},
     "app.tasks.weather_fetch.*": {"queue": "analytics"},
+    "app.tasks.weather_sync.*": {"queue": "analytics"},
     "app.tasks.fraud_scan.*": {"queue": "analytics"},
     "app.tasks.community_tasks.*": {"queue": "analytics"},
     "app.tasks.auto_claim.*": {"queue": "analytics"},
@@ -68,6 +70,10 @@ celery_app.conf.beat_schedule = {
     "fetch-weather-hourly": {
         "task": "app.tasks.weather_fetch.fetch_all_regions",
         "schedule": crontab(minute=0),
+    },
+    "sync-openmeteo-every-3h": {
+        "task": "app.tasks.weather_sync.sync_all_cells",
+        "schedule": crontab(minute=30, hour="*/3"),
     },
     "run-predictions-every-4h": {
         "task": "app.tasks.predict.run_all_predictions",
