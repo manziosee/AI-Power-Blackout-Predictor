@@ -1,7 +1,7 @@
 """
 Prediction API endpoint tests — covers all endpoints including new ones.
 """
-import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import AsyncClient
@@ -154,7 +154,6 @@ async def test_predictions_latest_returns_single_object_when_seeded(client: Asyn
     """Seed a prediction directly then fetch via /latest/."""
     from app.core.database import AsyncSessionLocal
     from app.models.prediction import Prediction
-    from datetime import datetime, timedelta, timezone
 
     h3 = "88283082aaffffff"
     now = datetime.now(timezone.utc)
@@ -208,7 +207,6 @@ async def test_predictions_compare_both_seeded(client: AsyncClient):
     """Seed two cells and verify delta is computed correctly."""
     from app.core.database import AsyncSessionLocal
     from app.models.prediction import Prediction
-    from datetime import datetime, timedelta, timezone
 
     now = datetime.now(timezone.utc)
     h3a = "88283082bbffffff"
@@ -272,7 +270,6 @@ async def test_predictions_explain_404_when_empty(client: AsyncClient):
 async def test_predictions_explain_returns_weights(client: AsyncClient):
     from app.core.database import AsyncSessionLocal
     from app.models.prediction import Prediction
-    from datetime import datetime, timedelta, timezone
 
     h3 = "88283082ddffffff"
     now = datetime.now(timezone.utc)

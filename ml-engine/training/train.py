@@ -10,13 +10,11 @@ Improvements over v0.1:
   - Prophet trained on timestamps from training fold only
 """
 import argparse
-import json
 import logging
-import os
 from datetime import datetime, timezone
 
 import numpy as np
-from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit
 
 from data.processors.feature_builder import build_training_dataset
 from models.xgboost_model import XGBoostOutageModel

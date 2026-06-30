@@ -3,10 +3,8 @@ import asyncio
 import logging
 import os
 
-import h3
 import httpx
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
 

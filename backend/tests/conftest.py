@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # ── SQLite compat: teach it to render JSONB and UUID as plain JSON / VARCHAR ──
-from sqlalchemy import JSON, String
+from sqlalchemy import String
 from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
 
 def _visit_JSONB(self, type_, **kw):
@@ -37,8 +37,8 @@ os.environ.setdefault("SMS_GATEWAY_URL", "http://localhost:8001")
 os.environ.setdefault("ML_ENGINE_URL", "http://localhost:8002")
 os.environ.setdefault("ENVIRONMENT", "test")
 
-from app.core.database import Base
-from app.main import app
+from app.core.database import Base  # noqa: E402
+from app.main import app  # noqa: E402
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 

@@ -3,20 +3,19 @@ ML Engine unit tests — run without a database.
 Tests feature engineering, model training on synthetic data,
 ensemble prediction, evaluation metrics, and registry I/O.
 """
-import math
 import os
 import sys
 import tempfile
 
 import numpy as np
-import pytest
+import pytest  # noqa: F401 — used by pytest.approx and pytest.mark.asyncio
 
 # Add ml-engine root to path so imports work in CI
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from features.weather_features import build_weather_features
 from features.temporal_features import build_temporal_features
-from models.xgboost_model import XGBoostOutageModel, FEATURE_NAMES
+from models.xgboost_model import XGBoostOutageModel  # noqa: F401
 from models.prophet_model import ProphetTrendModel
 from models.ensemble import EnsemblePredictor
 from training.evaluate import evaluate_model, cross_val_auc_pr
@@ -215,7 +214,6 @@ def test_ensemble_predict_with_confidence_fields():
 
 
 def test_ensemble_full_both_models():
-    import pandas as pd
     X_xgb, y = _synthetic_dataset(400)
     X_prophet, _ = _prophet_dataset(400)
 
