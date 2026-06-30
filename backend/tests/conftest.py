@@ -27,6 +27,8 @@ SQLiteTypeCompiler.visit_UUID = _visit_UUID
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Point config at SQLite before importing the app
+# ENVIRONMENT must be set first — rate_limit.py reads os.environ directly
+os.environ["ENVIRONMENT"] = "test"
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 os.environ.setdefault("SYNC_DATABASE_URL", "sqlite:///./test.db")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")

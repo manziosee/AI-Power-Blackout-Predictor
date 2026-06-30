@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 import uuid
 
@@ -90,7 +91,9 @@ async def enforce_auth_rate_limit(client_ip: str) -> None:
     Fail-open when Redis is unavailable.
     Disabled entirely in test environment to avoid flaky rate-limit failures.
     """
-    if settings.ENVIRONMENT == "test":
+    # Read directly from os.environ — settings is a cached singleton instantiated
+    # at import time, so settings.ENVIRONMENT may not reflect the test env var yet.
+    if os.environ.get("ENVIRONMENT", "").lower() == "test":
         return
     now_ms = int(time.time() * 1000)
     member = f"{now_ms}:{uuid.uuid4().hex[:8]}"
