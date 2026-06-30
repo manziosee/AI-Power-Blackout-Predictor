@@ -104,23 +104,51 @@ async def _run():
         )
         outages_7d: dict[str, int] = {r.h3_index: r.cnt for r in counts_res.all()}
 
+        # Fetch 30-day outage counts per cell (needed for features_snapshot + historical frequency)
+        month_ago = now - timedelta(days=30)
+        counts_30d_res = await db.execute(
+            select(OutageReport.h3_index, func.count(OutageReport.id).label("cnt"))
+            .where(OutageReport.reported_at >= month_ago)
+            .group_by(OutageReport.h3_index)
+        )
+        outages_30d: dict[str, int] = {r.h3_index: r.cnt for r in counts_30d_res.all()}
+
         # Build feature payloads grouped by region
         by_region: dict[str, list[dict]] = {}
+        # Keep a snapshot per cell for storage
+        feature_snapshots: dict[str, dict] = {}
         for cell in cells:
             w = weather_by_cell.get(cell.h3_index)
             region = _resolve_region(cell.country_code)
+            rain   = float(w.rainfall_mm or 0)    if w else 0.0
+            temp   = float(w.temperature_c or 20) if w else 20.0
+            wind   = float(w.wind_speed_ms or 0)  if w else 0.0
+            hum    = float(w.humidity_pct or 50)  if w else 50.0
+            code   = int(w.weather_code or 0)     if w else 0
+            o7d    = outages_7d.get(cell.h3_index, 0)
+            o30d   = outages_30d.get(cell.h3_index, 0)
             feature = {
-                "h3_index":        cell.h3_index,
-                "rainfall_mm":     float(w.rainfall_mm or 0)     if w else 0.0,
-                "temperature_c":   float(w.temperature_c or 20)  if w else 20.0,
-                "wind_speed_ms":   float(w.wind_speed_ms or 0)   if w else 0.0,
-                "humidity_pct":    float(w.humidity_pct or 50)   if w else 50.0,
-                "weather_code":    int(w.weather_code or 0)      if w else 0,
-                "hour":            now.hour,
-                "day_of_week":     now.weekday(),
-                "month":           now.month,
-                "outages_last_7d": outages_7d.get(cell.h3_index, 0),
-                "region_model":    region,
+                "h3_index":         cell.h3_index,
+                "rainfall_mm":      rain,
+                "temperature_c":    temp,
+                "wind_speed_ms":    wind,
+                "humidity_pct":     hum,
+                "weather_code":     code,
+                "hour":             now.hour,
+                "day_of_week":      now.weekday(),
+                "month":            now.month,
+                "outages_last_7d":  o7d,
+                "outages_last_30d": o30d,
+                "region_model":     region,
+                # Derived snapshot fields used by /explain
+                "weather_risk":        round(min(rain / 50.0, 1.0) * 0.35 + min(wind / 20.0, 1.0) * 0.25, 4),
+                "historical_frequency": round(min(o30d / 20.0, 1.0), 4),
+                "is_storm":            int(200 <= code <= 299),
+                "is_heavy_rain":       int(rain > 20),
+                "is_high_wind":        int(wind > 15),
+            }
+            feature_snapshots[cell.h3_index] = {
+                k: v for k, v in feature.items() if k != "h3_index"
             }
             by_region.setdefault(region, []).append(feature)
 
@@ -184,6 +212,7 @@ async def _run():
                 risk_level=risk,
                 model_version=version,
                 region_model=_resolve_region(cell.country_code),
+                features_snapshot=feature_snapshots.get(cell.h3_index),
                 predicted_duration_min=dur["min_minutes"] if dur else None,
                 predicted_duration_median=dur["median_minutes"] if dur else None,
                 predicted_duration_max=dur["max_minutes"] if dur else None,

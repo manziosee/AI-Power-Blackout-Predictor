@@ -4,11 +4,13 @@ ML Engine — prediction service.
 Startup: loads trained models from model_store/ (if present).
 Fallback: rule-based estimate when no trained model exists for a region.
 
-Feature vector (19 features, must match training pipeline):
-  weather (9):  rainfall_mm, temperature_c, wind_speed_ms, humidity_pct,
-                is_heavy_rain, is_high_wind, heat_index, is_storm, is_extreme
-  temporal (10): hour, day_of_week, month, is_weekend, is_peak_hour, is_night,
-                 hour_sin, hour_cos, month_sin, month_cos
+Feature vector (24 features — weather + temporal + historical + grid):
+  weather   (9):  rainfall_mm, temperature_c, wind_speed_ms, humidity_pct,
+                  is_heavy_rain, is_high_wind, heat_index, is_storm, is_extreme
+  temporal  (10): hour, day_of_week, month, is_weekend, is_peak_hour, is_night,
+                  hour_sin, hour_cos, month_sin, month_cos
+  historical (4): outages_7d, outages_30d, outage_freq_7d, has_recent_outage
+  grid       (1): outage-pressure proxy (outages_7d normalised)
 """
 import logging
 import math
@@ -24,7 +26,7 @@ from training.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="ML Engine — Blackout Predictor", version="1.0.0")
+app = FastAPI(title="ML Engine — Blackout Predictor", version="2.0.0")
 
 MODEL_STORE = os.path.join(os.path.dirname(__file__), "../model_store")
 _registry = ModelRegistry()
@@ -51,7 +53,6 @@ def _get_predictor(region: str) -> EnsemblePredictor:
     return _predictors[region]
 
 
-# Pre-load all regions present in model_store at startup
 @app.on_event("startup")
 def _preload_models():
     regions = _registry.list_regions()
@@ -64,24 +65,25 @@ def _preload_models():
 
 def _build_feature_vector(f: dict) -> np.ndarray:
     """
-    Build the 19-feature vector from raw features dict.
+    Build the full feature vector from a raw features dict.
     Matches the feature order produced by feature_builder during training.
+    Safe: missing keys fall back to sensible defaults.
     """
-    rain   = float(f.get("rainfall_mm", 0))
-    temp   = float(f.get("temperature_c", 20))
-    wind   = float(f.get("wind_speed_ms", 0))
-    hum    = float(f.get("humidity_pct", 50))
-    code   = int(f.get("weather_code", 0) or 0)
+    rain = float(f.get("rainfall_mm", 0) or 0)
+    temp = float(f.get("temperature_c", 20) or 20)
+    wind = float(f.get("wind_speed_ms", 0) or 0)
+    hum  = float(f.get("humidity_pct", 50) or 50)
+    code = int(f.get("weather_code", 0) or 0)
 
     # Weather derived
     is_heavy_rain = int(rain > 20)
     is_high_wind  = int(wind > 15)
-    heat_index    = temp * (hum / 100)
+    heat_index    = round(temp * (hum / 100), 4)
     is_storm      = int(200 <= code <= 299)
     is_extreme    = int(900 <= code <= 999)
 
     # Temporal
-    now = datetime.now(timezone.utc)
+    now  = datetime.now(timezone.utc)
     hour = int(f.get("hour", now.hour))
     dow  = int(f.get("day_of_week", now.weekday()))
     mon  = int(f.get("month", now.month))
@@ -93,27 +95,35 @@ def _build_feature_vector(f: dict) -> np.ndarray:
     month_sin = math.sin(2 * math.pi * mon / 12)
     month_cos = math.cos(2 * math.pi * mon / 12)
 
+    # Historical
+    o7d  = int(f.get("outages_last_7d", 0) or 0)
+    o30d = int(f.get("outages_last_30d", 0) or 0)
+    freq = round(o7d / 7.0, 4)
+    has_recent = int(o7d > 0)
+
     return np.array([[
         rain, temp, wind, hum,
         is_heavy_rain, is_high_wind, heat_index, is_storm, is_extreme,
         hour, dow, mon, is_weekend, is_peak_hour, is_night,
         hour_sin, hour_cos, month_sin, month_cos,
+        o7d, o30d, freq, has_recent,
+        min(o7d / 5.0, 1.0),  # outage pressure proxy
     ]], dtype=np.float32)
 
 
 def _rule_based_probability(f: dict) -> float:
-    """Simple deterministic estimate used when no trained model exists."""
-    rain   = float(f.get("rainfall_mm", 0))
-    wind   = float(f.get("wind_speed_ms", 0))
-    hour   = int(f.get("hour", 12))
-    history_7d = int(f.get("outages_last_7d", 0))
+    rain       = float(f.get("rainfall_mm", 0) or 0)
+    wind       = float(f.get("wind_speed_ms", 0) or 0)
+    hour       = int(f.get("hour", 12))
+    history_7d = int(f.get("outages_last_7d", 0) or 0)
 
-    rain_score    = min(rain / 50.0, 1.0) * 0.35
-    wind_score    = min(wind / 20.0, 1.0) * 0.25
-    peak_score    = 0.15 if hour in (7, 8, 17, 18, 19, 20) else 0.0
-    history_score = min(history_7d / 5.0, 1.0) * 0.25
-
-    return round(rain_score + wind_score + peak_score + history_score, 4)
+    return round(
+        min(rain / 50.0, 1.0) * 0.35
+        + min(wind / 20.0, 1.0) * 0.25
+        + (0.15 if hour in (7, 8, 17, 18, 19, 20) else 0.0)
+        + min(history_7d / 5.0, 1.0) * 0.25,
+        4,
+    )
 
 
 def _classify_risk(p: float) -> str:
@@ -140,29 +150,33 @@ class PredictResponse(BaseModel):
     region_model: str
     model_version: str
     used_ml_model: bool
+    confidence: str
 
 
 class BatchPredictRequest(BaseModel):
     region_model: str
-    cells: list[dict]   # each dict has h3_index + feature keys
+    cells: list[dict]
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @app.post("/predict", response_model=PredictResponse)
 async def predict(req: PredictRequest):
-    region = req.features.get("region_model", "global")
+    region    = req.features.get("region_model", "global")
     predictor = _get_predictor(region)
-    fv = _build_feature_vector(req.features)
+    fv        = _build_feature_vector(req.features)
 
-    if predictor._xgb_loaded:
-        prob = predictor.predict(fv, fv)
-        used_ml = True
-        version = f"ensemble-{region}-v1"
+    if predictor._xgb_loaded or predictor._prophet_loaded:
+        result    = predictor.predict_with_confidence(fv, fv)
+        prob      = result["probability"]
+        version   = result["model_version"]
+        conf      = result["confidence"]
+        used_ml   = True
     else:
-        prob = _rule_based_probability(req.features)
-        used_ml = False
+        prob    = _rule_based_probability(req.features)
         version = "rule-based-v0"
+        conf    = "none"
+        used_ml = False
 
     return PredictResponse(
         h3_index=req.h3_index,
@@ -171,26 +185,31 @@ async def predict(req: PredictRequest):
         region_model=region,
         model_version=version,
         used_ml_model=used_ml,
+        confidence=conf,
     )
 
 
 @app.post("/predict/batch")
 async def batch_predict(req: BatchPredictRequest):
     predictor = _get_predictor(req.region_model)
-    results = []
+    results   = []
     for cell in req.cells:
         fv = _build_feature_vector(cell)
-        if predictor._xgb_loaded:
-            prob = predictor.predict(fv, fv)
-            version = f"ensemble-{req.region_model}-v1"
+        if predictor._xgb_loaded or predictor._prophet_loaded:
+            result  = predictor.predict_with_confidence(fv, fv)
+            prob    = result["probability"]
+            version = result["model_version"]
+            conf    = result["confidence"]
         else:
-            prob = _rule_based_probability(cell)
+            prob    = _rule_based_probability(cell)
             version = "rule-based-v0"
+            conf    = "none"
         results.append({
-            "h3_index": cell["h3_index"],
-            "probability": prob,
-            "risk_level": _classify_risk(prob),
+            "h3_index":      cell["h3_index"],
+            "probability":   prob,
+            "risk_level":    _classify_risk(prob),
             "model_version": version,
+            "confidence":    conf,
         })
     return results
 
@@ -212,10 +231,48 @@ async def health():
     }
 
 
+@app.get("/feature-importance/{region}")
+async def feature_importance(region: str):
+    """Return normalised XGBoost feature importances for a region model."""
+    predictor = _get_predictor(region)
+    if not predictor._xgb_loaded:
+        return {"region": region, "importances": {}, "available": False}
+    try:
+        raw: dict = predictor.xgb.feature_importance
+        if not raw:
+            return {"region": region, "importances": {}, "available": False}
+        total = sum(raw.values()) or 1.0
+        normalised = {
+            k: round(v / total, 6)
+            for k, v in sorted(raw.items(), key=lambda x: -x[1])
+        }
+        return {"region": region, "importances": normalised, "available": True}
+    except Exception as exc:
+        logger.warning("feature_importance failed for %s: %s", region, exc)
+        return {"region": region, "importances": {}, "available": False}
+
+
+@app.get("/models")
+async def list_models():
+    """List all loaded region models and their metadata."""
+    out = []
+    for region in _registry.list_regions():
+        meta = _registry.get_metadata(region)
+        loaded = region in _predictors
+        out.append({
+            "region": region,
+            "loaded": loaded,
+            "xgb_loaded": _predictors[region]._xgb_loaded if loaded else False,
+            "prophet_loaded": _predictors[region]._prophet_loaded if loaded else False,
+            "metadata": meta,
+        })
+    return out
+
+
 # ── Background training ────────────────────────────────────────────────────────
 
 REGION_COUNTRIES = {
-    "africa_east":        ["RW", "KE", "UG", "TZ"],
+    "africa_east":        ["RW", "KE", "UG", "TZ", "ET"],
     "africa_west":        ["NG", "GH", "SN", "CI"],
     "europe_central":     ["FR", "DE", "GB", "BE", "NL"],
     "north_america_east": ["US", "CA"],

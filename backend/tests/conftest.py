@@ -28,11 +28,14 @@ SQLiteTypeCompiler.visit_UUID = _visit_UUID
 
 # Point config at SQLite before importing the app
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
+os.environ.setdefault("SYNC_DATABASE_URL", "sqlite:///./test.db")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
-os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-xxxxxxxxxx")
 os.environ.setdefault("OPENWEATHERMAP_API_KEY", "test-key")
 os.environ.setdefault("SMS_GATEWAY_API_KEY", "test-sms-key")
 os.environ.setdefault("SMS_GATEWAY_URL", "http://localhost:8001")
+os.environ.setdefault("ML_ENGINE_URL", "http://localhost:8002")
+os.environ.setdefault("ENVIRONMENT", "test")
 
 from app.core.database import Base
 from app.main import app
@@ -54,6 +57,9 @@ def event_loop():
 async def setup_db():
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # Patch AsyncSessionLocal so helpers that import it directly also use test DB
+    import app.core.database as _db_module
+    _db_module.AsyncSessionLocal = _session_factory
     yield
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
