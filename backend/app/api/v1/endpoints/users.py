@@ -347,6 +347,57 @@ async def update_location(
     return loc
 
 
+# ── Activity feed ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/me/activity",
+            summary="User activity feed",
+            description="Returns the user's recent outage reports, earned points, and area stats in one call.")
+async def activity_feed(
+    limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.outage import OutageReport
+    from app.models.community import PointTransaction
+
+    reports = (await db.execute(
+        select(OutageReport)
+        .where(OutageReport.user_id == current_user.id)
+        .order_by(OutageReport.reported_at.desc())
+        .limit(limit)
+    )).scalars().all()
+
+    points_txns = (await db.execute(
+        select(PointTransaction)
+        .where(PointTransaction.user_id == current_user.id)
+        .order_by(PointTransaction.created_at.desc())
+        .limit(limit)
+    )).scalars().all()
+
+    # Merge into a unified chronological feed
+    events = []
+    for r in reports:
+        events.append({
+            "type": "outage_report",
+            "id": str(r.id),
+            "h3_index": r.h3_index,
+            "verified": r.verified,
+            "source": r.source,
+            "timestamp": r.reported_at.isoformat(),
+        })
+    for t in points_txns:
+        events.append({
+            "type": "points_earned",
+            "id": str(t.id),
+            "points": t.points,
+            "reason": t.action,
+            "timestamp": t.created_at.isoformat(),
+        })
+
+    events.sort(key=lambda e: e["timestamp"], reverse=True)
+    return {"events": events[:limit]}
+
+
 @router.delete("/me/locations/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_location(
     location_id: uuid.UUID,

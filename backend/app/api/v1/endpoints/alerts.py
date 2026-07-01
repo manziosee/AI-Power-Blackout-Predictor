@@ -85,6 +85,54 @@ class QuietHoursUpdate(BaseModel):
     quiet_risk_override: str | None = None  # HIGH / VERY_HIGH / CRITICAL / null to clear
 
 
+# ── Bulk subscription ────────────────────────────────────────────────────────
+
+class BulkSubscribeItem(BaseModel):
+    h3_index: str
+    threshold_probability: float = 0.70
+    channels: List[str] = ["sms", "push"]
+
+
+class BulkSubscribeResult(BaseModel):
+    created: int
+    skipped: int
+    ids: List[uuid.UUID]
+
+
+@router.post("/subscriptions/bulk", response_model=BulkSubscribeResult, status_code=201,
+             summary="Bulk-subscribe to multiple H3 cells",
+             description="Creates up to 100 subscriptions in one request. Cells already subscribed are silently skipped.")
+async def bulk_subscribe(
+    items: List[BulkSubscribeItem],
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from fastapi import HTTPException
+    if len(items) > 100:
+        raise HTTPException(status_code=400, detail="Maximum 100 cells per bulk request")
+
+    existing = set(
+        (await db.execute(
+            select(AlertSubscription.h3_index)
+            .where(AlertSubscription.user_id == current_user.id)
+        )).scalars().all()
+    )
+
+    created_ids: List[uuid.UUID] = []
+    skipped = 0
+    for item in items:
+        if item.h3_index in existing:
+            skipped += 1
+            continue
+        sub = AlertSubscription(user_id=current_user.id, **item.model_dump())
+        db.add(sub)
+        await db.flush()
+        created_ids.append(sub.id)
+        existing.add(item.h3_index)
+
+    return BulkSubscribeResult(created=len(created_ids), skipped=skipped, ids=created_ids)
+
+
 @router.patch("/subscriptions/{sub_id}/quiet-hours", response_model=AlertSubscriptionOut,
               summary="Configure quiet hours and risk-level override",
               description="Suppress alerts during sleeping hours. Set `quiet_risk_override` to HIGH/VERY_HIGH/CRITICAL to still receive critical-risk alerts even during quiet hours.")

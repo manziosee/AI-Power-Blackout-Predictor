@@ -993,10 +993,85 @@ CREATE INDEX IF NOT EXISTS ix_admin_audit_logs_created_at ON admin_audit_logs(cr
 CREATE INDEX IF NOT EXISTS ix_admin_audit_logs_action     ON admin_audit_logs(action);
 
 -- ════════════════════════════════════════════════════════════
---  Mark alembic as fully migrated to revision 0037
+--  0038 — organizations
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS organizations (
+    id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    name       VARCHAR(200) NOT NULL,
+    slug       VARCHAR(100) UNIQUE NOT NULL,
+    plan       VARCHAR(20)  DEFAULT 'free',
+    created_at TIMESTAMPTZ  DEFAULT NOW()
+);
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
+
+-- ════════════════════════════════════════════════════════════
+--  0039 — SSO accounts
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS sso_accounts (
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider     VARCHAR(30) NOT NULL,
+    provider_uid VARCHAR(200) NOT NULL,
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_sso_provider_uid UNIQUE (provider, provider_uid)
+);
+CREATE INDEX IF NOT EXISTS ix_sso_accounts_user_id ON sso_accounts(user_id);
+
+-- ════════════════════════════════════════════════════════════
+--  0040 — uptime checks
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS uptime_checks (
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    service      VARCHAR(60) NOT NULL,
+    status       VARCHAR(20) NOT NULL,
+    response_ms  INTEGER,
+    is_healthy   BOOLEAN     NOT NULL DEFAULT TRUE,
+    checked_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_uptime_checks_service    ON uptime_checks(service);
+CREATE INDEX IF NOT EXISTS ix_uptime_checks_checked_at ON uptime_checks(checked_at);
+
+-- ════════════════════════════════════════════════════════════
+--  0041 — notification preferences + feed
+-- ════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS user_notification_preferences (
+    id                         UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                    UUID    NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    channels                   JSONB   NOT NULL DEFAULT '["sms","push"]',
+    default_threshold          FLOAT   NOT NULL DEFAULT 0.70,
+    quiet_hours_start          TIME,
+    quiet_hours_end            TIME,
+    quiet_risk_override        VARCHAR(20),
+    all_notifications_enabled  BOOLEAN NOT NULL DEFAULT TRUE
+);
+CREATE INDEX IF NOT EXISTS ix_user_notif_prefs_user_id ON user_notification_preferences(user_id);
+
+CREATE TABLE IF NOT EXISTS notification_feed (
+    id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    channel    VARCHAR(20) NOT NULL,
+    title      VARCHAR(200) NOT NULL,
+    body       TEXT        NOT NULL,
+    h3_index   VARCHAR(15),
+    risk_level VARCHAR(20),
+    is_read    BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_notification_feed_user_id    ON notification_feed(user_id);
+CREATE INDEX IF NOT EXISTS ix_notification_feed_created_at ON notification_feed(created_at);
+CREATE INDEX IF NOT EXISTS ix_notification_feed_h3_index   ON notification_feed(h3_index);
+
+-- ════════════════════════════════════════════════════════════
+--  Mark alembic as fully migrated to revision 0041
 -- ════════════════════════════════════════════════════════════
 
 DELETE FROM alembic_version;
 INSERT INTO alembic_version (version_num)
-VALUES ('0037')
+VALUES ('0041')
 ON CONFLICT DO NOTHING;

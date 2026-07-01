@@ -56,6 +56,7 @@ OpenTelemetry tracing can be enabled with `OTEL_ENABLED=true`.
 """
 
 _TAGS_METADATA = [
+    {"name": "Notifications", "description": "Unified notification inbox and global per-user notification preferences."},
     {"name": "Health", "description": "Service liveness check."},
     {"name": "Auth / Users", "description": "Registration, login, profile, locations, and subscription tier."},
     {"name": "Predictions", "description": "ML outage probability forecasts per H3 cell."},
@@ -149,11 +150,55 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(ws_router)
 
 
-@app.get("/health", tags=["Health"], summary="Service liveness check")
+@app.get("/health", tags=["Health"], summary="Deep service health check")
 async def health():
+    import asyncio
     from app.core.ws_manager import manager
+
+    checks: dict[str, str] = {}
+
+    # Database
+    try:
+        from app.core.database import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as _db:
+            await _db.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as exc:
+        checks["database"] = f"error: {exc}"
+
+    # Redis
+    try:
+        import redis.asyncio as aioredis
+        r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        await r.ping()
+        await r.aclose()
+        checks["redis"] = "ok"
+    except Exception as exc:
+        checks["redis"] = f"error: {exc}"
+
+    # ML Engine
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=3) as client:
+            resp = await client.get(f"{settings.ML_ENGINE_URL}/health")
+            checks["ml_engine"] = "ok" if resp.status_code == 200 else f"http_{resp.status_code}"
+    except Exception as exc:
+        checks["ml_engine"] = f"error: {exc}"
+
+    # SMS Gateway
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=3) as client:
+            resp = await client.get(f"{settings.SMS_GATEWAY_URL}/health")
+            checks["sms_gateway"] = "ok" if resp.status_code == 200 else f"http_{resp.status_code}"
+    except Exception as exc:
+        checks["sms_gateway"] = f"error: {exc}"
+
+    overall = "ok" if all(v == "ok" for v in checks.values()) else "degraded"
     return {
-        "status": "ok",
+        "status": overall,
         "app": settings.APP_NAME,
         "ws_connections": manager.connection_count,
+        "checks": checks,
     }

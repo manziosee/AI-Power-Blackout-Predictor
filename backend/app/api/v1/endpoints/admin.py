@@ -250,6 +250,64 @@ async def model_drift_report(
     return await get_drift_report(db)
 
 
+# ── SMS template preview ─────────────────────────────────────────────────────
+
+_SUPPORTED_LANGS = ["en", "fr", "sw", "rw", "ar", "es", "pt"]
+_SAMPLE_VARS = {
+    "outage_warning": {"prob": "78%", "time": "18:00"},
+    "outage_confirmed": {},
+    "outage_resolved": {"duration": "120"},
+    "welcome": {},
+    "test": {},
+    "_raw": {"message": "Sample raw message"},
+    "password_reset_otp": {"otp": "123456", "ttl_minutes": 10},
+}
+
+
+@router.get("/sms/template-preview",
+            summary="Preview SMS templates in all 7 languages",
+            description="Renders every template key with sample variables across all supported languages. Useful for QA before a campaign.")
+async def sms_template_preview(
+    template_key: str | None = Query(None, description="Filter to a single template key"),
+    lang: str | None = Query(None, description="Filter to a single language code"),
+    _admin: User = Depends(require_admin),
+):
+    import json as _json
+    import os
+
+    template_dir = os.path.join(
+        os.path.dirname(__file__),
+        "..", "..", "..", "..", "..", "sms-gateway", "templates"
+    )
+    template_dir = os.path.normpath(template_dir)
+
+    langs = [lang] if lang else _SUPPORTED_LANGS
+    result: dict[str, dict[str, str | None]] = {}
+
+    for lc in langs:
+        path = os.path.join(template_dir, f"{lc}.json")
+        fallback = os.path.join(template_dir, "en.json")
+        try:
+            with open(path if os.path.exists(path) else fallback) as f:
+                templates: dict = _json.load(f)
+        except FileNotFoundError:
+            templates = {}
+
+        keys = [template_key] if template_key else list(templates.keys())
+        result[lc] = {}
+        for key in keys:
+            raw = templates.get(key)
+            if raw is None:
+                result[lc][key] = None
+                continue
+            try:
+                result[lc][key] = raw.format(**_SAMPLE_VARS.get(key, {}))
+            except KeyError as exc:
+                result[lc][key] = f"[render error: missing var {exc}]"
+
+    return result
+
+
 # ── Admin Audit Log ───────────────────────────────────────────────────────────
 
 @router.get("/audit-log",

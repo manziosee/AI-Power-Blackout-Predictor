@@ -362,6 +362,84 @@ async def get_prediction_accuracy(
     return PredictionAccuracyOut(**metrics)
 
 
+# ── confidence trend ─────────────────────────────────────────────────────────
+
+@router.get(
+    "/cell/{h3_index}/confidence-trend",
+    summary="Model confidence over time for a cell",
+    description="Returns probability + confidence time-series for the last N predictions.",
+)
+async def confidence_trend(
+    h3_index: str,
+    limit: int = Query(default=24, ge=4, le=168),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = (await db.execute(
+        select(Prediction.predicted_at, Prediction.probability, Prediction.confidence, Prediction.risk_level)
+        .where(Prediction.h3_index == h3_index)
+        .order_by(Prediction.predicted_at.desc())
+        .limit(limit)
+    )).all()
+    return [
+        {
+            "predicted_at": r.predicted_at.isoformat(),
+            "probability": r.probability,
+            "confidence": r.confidence,
+            "risk_level": r.risk_level,
+        }
+        for r in reversed(rows)
+    ]
+
+
+# ── CSV export ────────────────────────────────────────────────────────────────
+
+@router.get(
+    "/export/{h3_index}",
+    summary="Export predictions as CSV",
+    description="Downloads prediction history for a cell as CSV — for regulatory submissions and NGO use.",
+)
+async def export_predictions_csv(
+    h3_index: str,
+    days: int = Query(default=30, ge=1, le=365),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    import csv
+    import io
+    from datetime import datetime, timedelta, timezone
+    from fastapi.responses import StreamingResponse
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    rows = (await db.execute(
+        select(Prediction)
+        .where(Prediction.h3_index == h3_index, Prediction.predicted_at >= since)
+        .order_by(Prediction.predicted_at.asc())
+    )).scalars().all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "id", "h3_index", "predicted_at", "window_start", "window_end",
+        "probability", "confidence", "risk_level", "model_version",
+        "predicted_duration_min", "predicted_duration_median", "predicted_duration_max",
+    ])
+    for r in rows:
+        writer.writerow([
+            str(r.id), r.h3_index,
+            r.predicted_at.isoformat(), r.window_start.isoformat(), r.window_end.isoformat(),
+            r.probability, r.confidence, r.risk_level, r.model_version,
+            r.predicted_duration_min, r.predicted_duration_median, r.predicted_duration_max,
+        ])
+    buf.seek(0)
+    filename = f"predictions_{h3_index}_{days}d.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 # ── admin on-demand trigger ────────────────────────────────────────────────────
 
 @router.post(

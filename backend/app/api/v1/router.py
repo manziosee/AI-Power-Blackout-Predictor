@@ -25,6 +25,7 @@ from app.api.v1.endpoints import (
     maintenance,
     medical_priority,
     neighborhoods,
+    notifications,
     orgs,
     outages,
     planned_outages,
@@ -61,6 +62,7 @@ api_router.include_router(predictions.router)
 api_router.include_router(outages.router)
 api_router.include_router(alerts.router)
 api_router.include_router(neighborhoods.router)
+api_router.include_router(notifications.router)
 api_router.include_router(reports.router)
 api_router.include_router(push.router)
 api_router.include_router(whatsapp.router)

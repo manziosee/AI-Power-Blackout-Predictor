@@ -11,6 +11,8 @@ from app.models.community import (
     UserPoints, UserBadge, PointTransaction,
     CommunityNote, NoteUpvote, NeighborAlertLog,
 )
+from app.models.user_preferences import UserNotificationPreferences
+from app.models.notification_feed import NotificationFeedItem
 
 __all__ = [
     "User", "UserLocation",
@@ -24,6 +26,8 @@ __all__ = [
     "PredictionAccuracy", "NeighborhoodStats",
     "UserPoints", "UserBadge", "PointTransaction",
     "CommunityNote", "NoteUpvote", "NeighborAlertLog",
+    "UserNotificationPreferences",
+    "NotificationFeedItem",
     "UtilityCompany", "BusinessProfile", "WebhookSubscription", "WebhookEvent",
     "FraudFlag",
     "SmsInboundLog",
