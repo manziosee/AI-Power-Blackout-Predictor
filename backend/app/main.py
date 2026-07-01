@@ -152,7 +152,6 @@ app.include_router(ws_router)
 
 @app.get("/health", tags=["Health"], summary="Deep service health check")
 async def health():
-    import asyncio
     from app.core.ws_manager import manager
 
     checks: dict[str, str] = {}
